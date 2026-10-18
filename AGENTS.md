@@ -1,6 +1,6 @@
 # Pomodoro
 
-A Pomodoro timer for iPhone, built with Expo (React Native, TypeScript). This file is the single source of instructions for every coding agent; `CLAUDE.md` only points here.
+A Pomodoro timer for iPhone, built with Expo (React Native, TypeScript). This file is the single source of instructions for every coding agent.
 
 ## Commands
 
