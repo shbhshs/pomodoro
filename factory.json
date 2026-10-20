@@ -1,0 +1,12 @@
+{
+  "image": "node:22-bookworm",
+  "install": "npm ci --no-audit --no-fund",
+  "check": "npm run check",
+  "tools": [
+    "Bash(npm run typecheck)",
+    "Bash(npm run lint)",
+    "Bash(npm test:*)",
+    "Bash(npx jest:*)",
+    "Bash(npx expo install:*)"
+  ]
+}
