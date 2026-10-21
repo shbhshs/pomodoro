@@ -2,7 +2,8 @@ export type Phase = 'focus' | 'shortBreak' | 'longBreak';
 
 export interface TimerState {
   phase: Phase;
-  remainingSeconds: number;
+  /** Time left in the phase, in milliseconds. Round only for display. */
+  remainingMs: number;
   running: boolean;
   completedFocusSessions: number;
   /** Timestamp (ms) at which the current phase ends; set only while running. */
@@ -20,7 +21,7 @@ export const SESSIONS_BEFORE_LONG_BREAK = 4;
 export function initialState(): TimerState {
   return {
     phase: 'focus',
-    remainingSeconds: DURATIONS.focus,
+    remainingMs: DURATIONS.focus * 1000,
     running: false,
     completedFocusSessions: 0,
     endsAt: null,
@@ -30,7 +31,7 @@ export function initialState(): TimerState {
 function enterPhase(phase: Phase, completedFocusSessions: number): TimerState {
   return {
     phase,
-    remainingSeconds: DURATIONS[phase],
+    remainingMs: DURATIONS[phase] * 1000,
     running: false,
     completedFocusSessions,
     endsAt: null,
@@ -38,20 +39,30 @@ function enterPhase(phase: Phase, completedFocusSessions: number): TimerState {
 }
 
 function remainingAt(state: TimerState, now: number): number {
-  if (state.endsAt === null) return state.remainingSeconds;
-  return Math.max(0, Math.ceil((state.endsAt - now) / 1000));
+  if (state.endsAt === null) return state.remainingMs;
+  return Math.max(0, state.endsAt - now);
+}
+
+/** Whole seconds to show for the remaining time, rounded up. */
+export function displaySeconds(state: TimerState): number {
+  return Math.ceil(state.remainingMs / 1000);
 }
 
 /** Starts or resumes the countdown from the current remaining time. */
 export function start(state: TimerState, now: number): TimerState {
   if (state.running) return state;
-  return { ...state, running: true, endsAt: now + state.remainingSeconds * 1000 };
+  return { ...state, running: true, endsAt: now + state.remainingMs };
 }
 
-/** Freezes the remaining time at `now`. */
+/**
+ * Freezes the remaining time at `now`. If the phase has already ended by
+ * `now`, it behaves like `tick` and advances to the next phase.
+ */
 export function pause(state: TimerState, now: number): TimerState {
   if (!state.running) return state;
-  return { ...state, running: false, endsAt: null, remainingSeconds: remainingAt(state, now) };
+  const advanced = tick(state, now);
+  if (advanced.running) return { ...advanced, running: false, endsAt: null };
+  return advanced;
 }
 
 /** Restores the current phase to its full duration, stopped. */
@@ -67,7 +78,7 @@ export function reset(state: TimerState): TimerState {
 export function tick(state: TimerState, now: number): TimerState {
   if (!state.running) return state;
   const remaining = remainingAt(state, now);
-  if (remaining > 0) return { ...state, remainingSeconds: remaining };
+  if (remaining > 0) return { ...state, remainingMs: remaining };
   if (state.phase === 'focus') {
     const completed = state.completedFocusSessions + 1;
     const next = completed % SESSIONS_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
