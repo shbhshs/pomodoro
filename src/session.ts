@@ -21,15 +21,15 @@ function startOf(routine: Exercise[], index: number): number {
  * empty.
  */
 export function positionAt(routine: Exercise[], elapsedMs: number): ExercisePosition {
+  const last = routine.length - 1;
   let start = 0;
-  for (let index = 0; index < routine.length; index++) {
+  for (let index = 0; index < last; index++) {
     const end = start + routine[index].durationSeconds * 1000;
-    if (elapsedMs < end || index === routine.length - 1) {
-      return { index, remainingMs: Math.max(0, end - elapsedMs) };
-    }
+    if (elapsedMs < end) return { index, remainingMs: end - elapsedMs };
     start = end;
   }
-  throw new Error('routine must not be empty');
+  const end = start + routine[last].durationSeconds * 1000;
+  return { index: last, remainingMs: Math.max(0, end - elapsedMs) };
 }
 
 /** Whole seconds to show for an exercise's remaining time, rounded up. */

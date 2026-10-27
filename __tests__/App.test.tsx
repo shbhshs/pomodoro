@@ -115,6 +115,39 @@ describe('App', () => {
       expect(screen.getByText('2 of 5')).toBeTruthy();
     });
 
+    it('Next exercise mid-tick still starts the next exercise at a full minute', async () => {
+      await startBreak();
+      await advance(10 * 1000 + 500);
+      await fireEvent.press(screen.getByText('Next exercise'));
+      expect(screen.getByText('2 of 5')).toBeTruthy();
+      expect(exerciseTime()).toHaveTextContent('01:00');
+    });
+
+    it('a Next exercise in one break does not carry into the next', async () => {
+      await startBreak();
+      await fireEvent.press(screen.getByText('Next exercise'));
+      await fireEvent.press(screen.getByText('Skip break'));
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      expect(screen.getByText('1 of 5')).toBeTruthy();
+    });
+
+    it('shows the right exercise after the app was backgrounded', async () => {
+      await startBreak();
+      // The clock jumps 2 minutes 30 seconds with no ticks in between.
+      jest.setSystemTime(Date.now() + 150 * 1000);
+      await advance(1000);
+      expect(screen.getByText('3 of 5')).toBeTruthy();
+      expect(exerciseTime()).toHaveTextContent('00:29');
+    });
+
+    it('lists every exercise of a long break', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      for (let i = 0; i < 3 * 30 + 25; i++) await advance(60 * 1000);
+      expect(screen.getByText('1 of 15')).toBeTruthy();
+    });
+
     it('Reset during a break restarts the routine', async () => {
       await startBreak();
       await fireEvent.press(screen.getByText('Next exercise'));
@@ -135,7 +168,7 @@ describe('App', () => {
     });
 
     it('renders nothing for an empty routine', async () => {
-      await render(<BreakScreen routine={[]} elapsedMs={0} onSkipBreak={() => {}} />);
+      await render(<BreakScreen routine={[]} elapsedMs={0} onNext={() => {}} onSkipBreak={() => {}} />);
       expect(screen.queryByText('MOVEMENT BREAK')).toBeNull();
     });
 

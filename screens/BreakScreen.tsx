@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Exercise } from '../src/exercises';
-import { exerciseSeconds, positionAt, skipAheadMs } from '../src/session';
+import { exerciseSeconds, positionAt } from '../src/session';
 import { theme } from '../src/theme';
 import { formatTime } from '../src/time';
 
@@ -10,19 +9,17 @@ const colors = theme.break;
 
 interface Props {
   routine: Exercise[];
-  /** Milliseconds of the break that have passed, from the app's timer state. */
+  /** Milliseconds of the routine that have passed, from the app's timer state. */
   elapsedMs: number;
+  onNext: () => void;
   onSkipBreak: () => void;
 }
 
-export default function BreakScreen({ routine, elapsedMs, onSkipBreak }: Props) {
-  // Time jumped ahead by "Next exercise". Reset by remounting the screen.
-  const [skippedMs, setSkippedMs] = useState(0);
+export default function BreakScreen({ routine, elapsedMs, onNext, onSkipBreak }: Props) {
   if (routine.length === 0) return null;
 
-  const position = positionAt(routine, elapsedMs + skippedMs);
+  const position = positionAt(routine, elapsedMs);
   const exercise = routine[position.index];
-  const onNext = () => setSkippedMs((ms) => ms + skipAheadMs(routine, elapsedMs + ms));
 
   return (
     <View style={styles.container}>
@@ -33,7 +30,7 @@ export default function BreakScreen({ routine, elapsedMs, onSkipBreak }: Props) 
         </Text>
       </View>
       <View style={styles.segments}>
-        {routine.map((e, i) => (
+        {routine.map((_, i) => (
           <View key={i} style={[styles.segment, i <= position.index && styles.segmentActive]} />
         ))}
       </View>

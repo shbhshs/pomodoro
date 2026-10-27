@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
 import { BODY_PARTS, buildRoutine } from './src/exercises';
+import { skipAheadMs } from './src/session';
 import { formatTime } from './src/time';
 import {
   DURATIONS,
@@ -32,12 +33,24 @@ export default function App() {
     return () => clearInterval(id);
   }, [state.running]);
 
-  // Bumped on Reset so the break screen starts its routine over.
-  const [resets, setResets] = useState(0);
+  // Time jumped ahead by "Next exercise", valid only for the break it was made in.
+  const [skipped, setSkipped] = useState({ key: '', ms: 0 });
+  const breakKey = `${state.phase}-${state.completedFocusSessions}`;
+  const skippedMs = skipped.key === breakKey ? skipped.ms : 0;
   const routine = useMemo(() => buildRoutine(DURATIONS[state.phase], BODY_PARTS), [state.phase]);
 
-  const toggle =() =>
+  const toggle = () =>
     setState((s) => (s.running ? pause(s, Date.now()) : start(s, Date.now())));
+
+  const nextExercise = () => {
+    // Refresh from the clock first, so the next exercise starts now rather
+    // than up to a tick late.
+    const fresh = tick(state, Date.now());
+    setState(fresh);
+    if (fresh.phase !== state.phase) return;
+    const elapsed = DURATIONS[fresh.phase] * 1000 - fresh.remainingMs + skippedMs;
+    setSkipped({ key: breakKey, ms: skippedMs + skipAheadMs(routine, elapsed) });
+  };
 
   return (
     <View style={styles.container}>
@@ -47,9 +60,9 @@ export default function App() {
       </Text>
       {state.phase !== 'focus' && (
         <BreakScreen
-          key={`${state.phase}-${state.completedFocusSessions}-${resets}`}
           routine={routine}
-          elapsedMs={DURATIONS[state.phase] * 1000 - state.remainingMs}
+          elapsedMs={DURATIONS[state.phase] * 1000 - state.remainingMs + skippedMs}
+          onNext={nextExercise}
           onSkipBreak={() => setState((s) => skip(s))}
         />
       )}
@@ -62,7 +75,7 @@ export default function App() {
           style={styles.button}
           onPress={() => {
             setState((s) => reset(s));
-            setResets((n) => n + 1);
+            setSkipped({ key: '', ms: 0 });
           }}>
           <Text style={styles.buttonText}>Reset</Text>
         </Pressable>
