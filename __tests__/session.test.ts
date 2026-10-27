@@ -4,7 +4,6 @@ import {
   nextExercise,
   positionAt,
   routineElapsedMs,
-  skipAheadMs,
 } from '../src/session';
 import { DURATIONS, initialState, skip, start } from '../src/timer';
 
@@ -30,12 +29,8 @@ describe('exercise session', () => {
     expect(exerciseSeconds(p)).toBe(0);
   });
 
-  it('skipAheadMs moves to the start of the next exercise, and is 0 on the last', () => {
-    expect(skipAheadMs(routine, 10_000)).toBe(50_000);
-    const p = positionAt(routine, 10_000 + skipAheadMs(routine, 10_000));
-    expect(p.index).toBe(1);
-    expect(exerciseSeconds(p)).toBe(60);
-    expect(skipAheadMs(routine, 150_000)).toBe(0);
+  it('treats an empty routine as index 0 with nothing left', () => {
+    expect(positionAt([], 10_000)).toEqual({ index: 0, remainingMs: 0 });
   });
 
   describe('nextExercise', () => {
@@ -51,6 +46,13 @@ describe('exercise session', () => {
       const p = positionAt(routine, routineElapsedMs(s));
       expect(p.index).toBe(1);
       expect(exerciseSeconds(p)).toBe(60);
+    });
+
+    it('does not move past the last exercise', () => {
+      const last = nextExercise(start(skip(initialState()), t0), routine, t0 + 150_000);
+      const again = nextExercise(last, routine, t0 + 150_000);
+      expect(again.skippedMs).toBe(last.skippedMs);
+      expect(positionAt(routine, routineElapsedMs(again)).index).toBe(2);
     });
 
     it('does not carry into a break reached by skipping focus', () => {

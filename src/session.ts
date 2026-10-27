@@ -14,6 +14,7 @@ export interface ExercisePosition {
  * exercise stays current, at 0, until the break ends.
  */
 export function positionAt(routine: Exercise[], elapsedMs: number): ExercisePosition {
+  if (routine.length === 0) return { index: 0, remainingMs: 0 };
   const last = routine.length - 1;
   let end = 0;
   for (let index = 0; index < last; index++) {
@@ -33,7 +34,7 @@ export function exerciseSeconds(position: ExercisePosition): number {
  * How much further into the routine to move so that the next exercise starts
  * now. Returns 0 on the last exercise.
  */
-export function skipAheadMs(routine: Exercise[], elapsedMs: number): number {
+function skipAheadMs(routine: Exercise[], elapsedMs: number): number {
   const { index, remainingMs } = positionAt(routine, elapsedMs);
   return index >= routine.length - 1 ? 0 : remainingMs;
 }

@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
@@ -33,7 +33,10 @@ export default function App() {
     return () => clearInterval(id);
   }, [state.running]);
 
-  const routine = buildRoutine(DURATIONS[state.phase], BODY_PARTS);
+  const routine = useMemo(
+    () => (state.phase === 'focus' ? [] : buildRoutine(DURATIONS[state.phase], BODY_PARTS)),
+    [state.phase],
+  );
 
   const toggle = () =>
     setState((s) => (s.running ? pause(s, Date.now()) : start(s, Date.now())));

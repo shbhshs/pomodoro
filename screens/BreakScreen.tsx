@@ -18,6 +18,7 @@ interface Props {
 export default function BreakScreen({ routine, elapsedMs, onNext, onSkipBreak }: Props) {
   const position = positionAt(routine, elapsedMs);
   const exercise = routine[position.index];
+  if (!exercise) return null;
 
   return (
     <View style={styles.container}>
