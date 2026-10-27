@@ -1,49 +1,48 @@
 import type { Exercise } from './exercises';
 
-export interface ExerciseSession {
-  routine: Exercise[];
-  /** Index of the current exercise in `routine`. */
+export interface ExercisePosition {
+  /** Index of the current exercise in the routine. */
   index: number;
-  /** Timestamp (ms) at which the current exercise ends. */
-  endsAt: number;
+  /** Milliseconds left in the current exercise. */
+  remainingMs: number;
 }
 
-/** Starts a session on the first exercise of a non-empty routine. */
-export function startSession(routine: Exercise[], now: number): ExerciseSession {
-  return { routine, index: 0, endsAt: now + routine[0].durationSeconds * 1000 };
-}
-
-export function isLast(session: ExerciseSession): boolean {
-  return session.index >= session.routine.length - 1;
-}
-
-export function currentExercise(session: ExerciseSession): Exercise {
-  return session.routine[session.index];
-}
-
-/** Whole seconds left in the current exercise, rounded up. */
-export function exerciseSeconds(session: ExerciseSession, now: number): number {
-  return Math.max(0, Math.ceil((session.endsAt - now) / 1000));
+/** Milliseconds from the start of the break at which exercise `index` starts. */
+function startOf(routine: Exercise[], index: number): number {
+  let ms = 0;
+  for (let i = 0; i < index; i++) ms += routine[i].durationSeconds * 1000;
+  return ms;
 }
 
 /**
- * Moves to the next exercise when the current one has run out. The next one
- * starts where the previous ended, so no time is lost to tick granularity.
- * The last exercise stays on screen at 0 until the break ends.
+ * Where the routine is after `elapsedMs` of the break, which the caller takes
+ * from the timer state so that pausing the timer pauses the routine. The last
+ * exercise stays current, at 0, until the break ends. The routine must not be
+ * empty.
  */
-export function tickSession(session: ExerciseSession, now: number): ExerciseSession {
-  let { index, endsAt } = session;
-  while (now >= endsAt && index < session.routine.length - 1) {
-    index++;
-    endsAt += session.routine[index].durationSeconds * 1000;
+export function positionAt(routine: Exercise[], elapsedMs: number): ExercisePosition {
+  let start = 0;
+  for (let index = 0; index < routine.length; index++) {
+    const end = start + routine[index].durationSeconds * 1000;
+    if (elapsedMs < end || index === routine.length - 1) {
+      return { index, remainingMs: Math.max(0, end - elapsedMs) };
+    }
+    start = end;
   }
-  if (index === session.index) return session;
-  return { ...session, index, endsAt };
+  throw new Error('routine must not be empty');
 }
 
-/** Jumps to the next exercise now. On the last one it does nothing. */
-export function nextExercise(session: ExerciseSession, now: number): ExerciseSession {
-  if (isLast(session)) return session;
-  const index = session.index + 1;
-  return { ...session, index, endsAt: now + session.routine[index].durationSeconds * 1000 };
+/** Whole seconds to show for an exercise's remaining time, rounded up. */
+export function exerciseSeconds(position: ExercisePosition): number {
+  return Math.ceil(position.remainingMs / 1000);
+}
+
+/**
+ * How much further into the routine to move so that the next exercise starts
+ * now. Returns 0 on the last exercise.
+ */
+export function skipAheadMs(routine: Exercise[], elapsedMs: number): number {
+  const { index } = positionAt(routine, elapsedMs);
+  if (index >= routine.length - 1) return 0;
+  return startOf(routine, index + 1) - elapsedMs;
 }

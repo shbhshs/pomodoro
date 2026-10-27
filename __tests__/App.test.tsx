@@ -2,6 +2,7 @@ import { act } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import App from '../App';
+import BreakScreen from '../screens/BreakScreen';
 
 const time = () => screen.getByLabelText('time remaining');
 
@@ -99,6 +100,43 @@ describe('App', () => {
       await fireEvent.press(screen.getByText('Next exercise'));
       expect(screen.getByText('Shoulder rolls and shrugs')).toBeTruthy();
       expect(exerciseTime()).toHaveTextContent('01:00');
+    });
+
+    it('pausing the break pauses the exercise countdown', async () => {
+      await startBreak();
+      await advance(50 * 1000);
+      await fireEvent.press(screen.getByText('Pause'));
+      await advance(5 * 60 * 1000);
+      expect(screen.getByText('1 of 5')).toBeTruthy();
+      expect(exerciseTime()).toHaveTextContent('00:10');
+
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(11 * 1000);
+      expect(screen.getByText('2 of 5')).toBeTruthy();
+    });
+
+    it('Reset during a break restarts the routine', async () => {
+      await startBreak();
+      await fireEvent.press(screen.getByText('Next exercise'));
+      await fireEvent.press(screen.getByText('Reset'));
+      expect(screen.getByText('1 of 5')).toBeTruthy();
+      expect(exerciseTime()).toHaveTextContent('01:00');
+    });
+
+    it('stays on the last exercise until the break ends', async () => {
+      await startBreak();
+      for (let i = 0; i < 4; i++) await advance(60 * 1000);
+      await advance(59 * 1000);
+      expect(screen.getByText('5 of 5')).toBeTruthy();
+      expect(exerciseTime()).toHaveTextContent('00:01');
+      await fireEvent.press(screen.getByText('Next exercise'));
+      expect(screen.getByText('5 of 5')).toBeTruthy();
+      expect(exerciseTime()).toHaveTextContent('00:01');
+    });
+
+    it('renders nothing for an empty routine', async () => {
+      await render(<BreakScreen routine={[]} elapsedMs={0} onSkipBreak={() => {}} />);
+      expect(screen.queryByText('MOVEMENT BREAK')).toBeNull();
     });
 
     it('Skip break returns to focus', async () => {

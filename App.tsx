@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
@@ -32,7 +32,11 @@ export default function App() {
     return () => clearInterval(id);
   }, [state.running]);
 
-  const toggle = () =>
+  // Bumped on Reset so the break screen starts its routine over.
+  const [resets, setResets] = useState(0);
+  const routine = useMemo(() => buildRoutine(DURATIONS[state.phase], BODY_PARTS), [state.phase]);
+
+  const toggle =() =>
     setState((s) => (s.running ? pause(s, Date.now()) : start(s, Date.now())));
 
   return (
@@ -43,8 +47,9 @@ export default function App() {
       </Text>
       {state.phase !== 'focus' && (
         <BreakScreen
-          key={`${state.phase}-${state.completedFocusSessions}`}
-          routine={buildRoutine(DURATIONS[state.phase], BODY_PARTS)}
+          key={`${state.phase}-${state.completedFocusSessions}-${resets}`}
+          routine={routine}
+          elapsedMs={DURATIONS[state.phase] * 1000 - state.remainingMs}
           onSkipBreak={() => setState((s) => skip(s))}
         />
       )}
@@ -55,7 +60,10 @@ export default function App() {
         <Pressable
           accessibilityRole="button"
           style={styles.button}
-          onPress={() => setState((s) => reset(s))}>
+          onPress={() => {
+            setState((s) => reset(s));
+            setResets((n) => n + 1);
+          }}>
           <Text style={styles.buttonText}>Reset</Text>
         </Pressable>
       </View>

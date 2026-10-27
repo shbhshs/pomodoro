@@ -1,14 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Exercise } from '../src/exercises';
-import {
-  currentExercise,
-  exerciseSeconds,
-  nextExercise,
-  startSession,
-  tickSession,
-} from '../src/session';
+import { exerciseSeconds, positionAt, skipAheadMs } from '../src/session';
 import { theme } from '../src/theme';
 import { formatTime } from '../src/time';
 
@@ -16,40 +10,31 @@ const colors = theme.break;
 
 interface Props {
   routine: Exercise[];
+  /** Milliseconds of the break that have passed, from the app's timer state. */
+  elapsedMs: number;
   onSkipBreak: () => void;
 }
 
-export default function BreakScreen({ routine, onSkipBreak }: Props) {
-  const [session, setSession] = useState(() => startSession(routine, Date.now()));
-  const [now, setNow] = useState(() => Date.now());
+export default function BreakScreen({ routine, elapsedMs, onSkipBreak }: Props) {
+  // Time jumped ahead by "Next exercise". Reset by remounting the screen.
+  const [skippedMs, setSkippedMs] = useState(0);
+  if (routine.length === 0) return null;
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      const t = Date.now();
-      setSession((s) => tickSession(s, t));
-      setNow(t);
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const exercise = currentExercise(session);
-  const onNext = () => {
-    const t = Date.now();
-    setSession((s) => nextExercise(s, t));
-    setNow(t);
-  };
+  const position = positionAt(routine, elapsedMs + skippedMs);
+  const exercise = routine[position.index];
+  const onNext = () => setSkippedMs((ms) => ms + skipAheadMs(routine, elapsedMs + ms));
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.label}>MOVEMENT BREAK</Text>
         <Text style={styles.muted}>
-          {session.index + 1} of {session.routine.length}
+          {position.index + 1} of {routine.length}
         </Text>
       </View>
       <View style={styles.segments}>
-        {session.routine.map((e, i) => (
-          <View key={i} style={[styles.segment, i <= session.index && styles.segmentActive]} />
+        {routine.map((e, i) => (
+          <View key={i} style={[styles.segment, i <= position.index && styles.segmentActive]} />
         ))}
       </View>
       <View
@@ -67,7 +52,7 @@ export default function BreakScreen({ routine, onSkipBreak }: Props) {
         ))}
       </View>
       <Text style={styles.countdown} accessibilityLabel="exercise time remaining">
-        {formatTime(exerciseSeconds(session, now))}
+        {formatTime(exerciseSeconds(position))}
       </Text>
       <Pressable accessibilityRole="button" style={styles.primary} onPress={onNext}>
         <Text style={styles.primaryText}>Next exercise</Text>
