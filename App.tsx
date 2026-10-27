@@ -5,6 +5,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatTime } from './src/time';
 import { displaySeconds, initialState, pause, reset, start, tick, type Phase } from './src/timer';
 
+export const BACKGROUNDS: Record<Phase, string> = {
+  focus: '#ffffff',
+  shortBreak: '#dff3e4',
+  longBreak: '#dff3e4',
+};
+
 const LABELS: Record<Phase, string> = {
   focus: 'Focus',
   shortBreak: 'Short break',
@@ -24,14 +30,13 @@ export default function App() {
     setState((s) => (s.running ? pause(s, Date.now()) : start(s, Date.now())));
 
   return (
-    <View style={styles.container}>
+    <View
+      testID="screen"
+      style={[styles.container, { backgroundColor: BACKGROUNDS[state.phase] }]}>
       <Text style={styles.label}>{LABELS[state.phase]}</Text>
       <Text style={styles.time} accessibilityLabel="time remaining">
         {formatTime(displaySeconds(state))}
       </Text>
-      {state.phase !== 'focus' && (
-        <Text style={styles.placeholder}>Exercise break: move around until the timer ends.</Text>
-      )}
       <View style={styles.buttons}>
         <Pressable accessibilityRole="button" style={styles.button} onPress={toggle}>
           <Text style={styles.buttonText}>{state.running ? 'Pause' : 'Start'}</Text>
@@ -51,17 +56,12 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   label: {
     fontSize: 20,
-    color: '#555',
-  },
-  placeholder: {
-    fontSize: 16,
     color: '#555',
   },
   buttons: {

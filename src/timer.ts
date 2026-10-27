@@ -91,8 +91,10 @@ export function tick(state: TimerState, now: number): TimerState {
   }
   // The next phase starts exactly when this one ended, so no time is lost to
   // tick granularity. After a long gap it starts now instead of cascading.
-  const nextEnd = (state.endsAt ?? now) + next.remainingMs;
-  const endsAt = nextEnd > now ? nextEnd : now + next.remainingMs;
+  // endsAt is non-null while running; if the carried end is not in the future
+  // (gap longer than the next phase), restart the next phase in full from now.
+  const carriedEnd = (state.endsAt ?? now) + next.remainingMs;
+  const endsAt = carriedEnd > now ? carriedEnd : now + next.remainingMs;
   return { ...next, running: true, endsAt, remainingMs: endsAt - now };
 }
 

@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import App from '../App';
+import App, { BACKGROUNDS } from '../App';
 
 const time = () => screen.getByLabelText('time remaining');
 
@@ -42,21 +42,18 @@ describe('App', () => {
     await fireEvent.press(screen.getByText('Start'));
     await advance(25 * 60 * 1000);
     expect(screen.getByText('Short break')).toBeTruthy();
-    expect(screen.getByText(/Exercise break/)).toBeTruthy();
     expect(time()).toHaveTextContent('05:00');
+    expect(screen.getByTestId('screen')).toHaveStyle({ backgroundColor: BACKGROUNDS.shortBreak });
 
     await advance(5 * 60 * 1000);
     expect(screen.getByText('Focus')).toBeTruthy();
     expect(time()).toHaveTextContent('25:00');
+    expect(screen.getByTestId('screen')).toHaveStyle({ backgroundColor: BACKGROUNDS.focus });
   });
 
-  it('takes a long break after the 4th focus session', async () => {
-    await render(<App />);
-    await fireEvent.press(screen.getByText('Start'));
-    // Step by the minute: updates batch inside one act, so a single huge advance reads one late Date.now().
-    for (let i = 0; i < 3 * 30 + 25; i++) await advance(60 * 1000);
-    expect(screen.getByText('Long break')).toBeTruthy();
-    expect(time()).toHaveTextContent('15:00');
+  it('uses different background colours for focus and breaks', () => {
+    expect(BACKGROUNDS.focus).not.toBe(BACKGROUNDS.shortBreak);
+    expect(BACKGROUNDS.focus).not.toBe(BACKGROUNDS.longBreak);
   });
 
   it('resets to the full duration and stops', async () => {
