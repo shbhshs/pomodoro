@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Pressable,StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
 import { BODY_PARTS, buildRoutine } from './src/exercises';
@@ -11,6 +11,8 @@ import {
   completionBetween,
   emptyStats,
   loadStats,
+  mergeStats,
+  msUntilNextDay,
   record,
   saveStats,
   statsForDay,
@@ -65,12 +67,7 @@ export default function App() {
     void loadStats(Date.now()).then((saved) => {
       if (cancelled) return;
       // Keep anything completed while the saved stats were loading.
-      setStats((current) => ({
-        ...saved,
-        focusSessions: saved.focusSessions + current.focusSessions,
-        focusMinutes: saved.focusMinutes + current.focusMinutes,
-        exerciseSessions: saved.exerciseSessions + current.exerciseSessions,
-      }));
+      setStats((current) => mergeStats(saved, current));
       statsLoaded.current = true;
     });
     return () => {
@@ -91,7 +88,21 @@ export default function App() {
     if (statsLoaded.current) void saveStats(stats);
   }, [stats]);
 
-  const today = statsForDay(stats, Date.now());
+  // Re-render at local midnight and when the app returns to the foreground,
+  // so an idle screen does not keep showing yesterday's numbers.
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setTimeout(() => setClock(Date.now()), msUntilNextDay(clock) + 50);
+    return () => clearTimeout(id);
+  }, [clock]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') setClock(Date.now());
+    });
+    return () => sub.remove();
+  }, []);
+
+  const today = statsForDay(stats, Math.max(clock, Date.now()));
 
   const routine = useMemo(
     () => (state.phase === 'focus' ? [] : buildRoutine(DURATIONS[state.phase], BODY_PARTS)),

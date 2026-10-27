@@ -5,12 +5,14 @@ import {
   dayKey,
   emptyStats,
   loadStats,
+  mergeStats,
+  msUntilNextDay,
   record,
   saveStats,
   statsForDay,
   STATS_KEY,
 } from '../src/stats';
-import { initialState, skip, start, tick } from '../src/timer';
+import { initialState, pause, reset, skip, start, tick } from '../src/timer';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -72,6 +74,27 @@ describe('daily stats', () => {
   });
 });
 
+describe('day helpers', () => {
+  it('finds the time to the next local midnight', () => {
+    expect(msUntilNextDay(at(2026, 10, 27, 23, 59, 59))).toBe(1000);
+    expect(msUntilNextDay(at(2026, 10, 27, 0, 0, 0))).toBeGreaterThanOrEqual(23 * 3600 * 1000);
+  });
+
+  it('merges same-day stats and keeps the later day otherwise', () => {
+    const a = record(emptyStats(at(2026, 10, 27)), 'focus', at(2026, 10, 27));
+    const b = record(emptyStats(at(2026, 10, 27)), 'exercise', at(2026, 10, 27));
+    expect(mergeStats(a, b)).toEqual({
+      date: '2026-10-27',
+      focusSessions: 1,
+      focusMinutes: 25,
+      exerciseSessions: 1,
+    });
+    const next = record(emptyStats(at(2026, 10, 28)), 'focus', at(2026, 10, 28));
+    expect(mergeStats(a, next)).toEqual(next);
+    expect(mergeStats(next, a)).toEqual(next);
+  });
+});
+
 describe('completionBetween', () => {
   const t0 = 1_000_000;
   const running = start(initialState(), t0);
@@ -84,6 +107,25 @@ describe('completionBetween', () => {
     const inBreak = tick(running, t0 + 25 * 60 * 1000);
     const next = tick(inBreak, inBreak.endsAt! + 1);
     expect(completionBetween(inBreak, next)).toBe('exercise');
+  });
+
+  it('reports a break that ended at the moment of Pause', () => {
+    const inBreak = tick(running, t0 + 25 * 60 * 1000);
+    const paused = pause(inBreak, inBreak.endsAt! + 1);
+    expect(paused.running).toBe(false);
+    expect(completionBetween(inBreak, paused)).toBe('exercise');
+  });
+
+  it('reports a focus session that ended at the moment of Pause', () => {
+    const paused = pause(running, t0 + 25 * 60 * 1000 + 1);
+    expect(paused.running).toBe(false);
+    expect(completionBetween(running, paused)).toBe('focus');
+  });
+
+  it('ignores a reset', () => {
+    const inBreak = tick(running, t0 + 25 * 60 * 1000);
+    expect(completionBetween(running, reset(running))).toBeNull();
+    expect(completionBetween(inBreak, reset(inBreak))).toBeNull();
   });
 
   it('ignores ticks, skips and pauses mid-phase', () => {

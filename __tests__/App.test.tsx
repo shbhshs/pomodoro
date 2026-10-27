@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
 import App from '../App';
+import { dayKey } from '../src/stats';
 
 jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
@@ -100,8 +101,38 @@ describe('App', () => {
       expect(stats()).toHaveTextContent('1Focus sessions25Focus minutes0Exercise sessions');
     });
 
+    it('does not count a reset', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(60 * 1000);
+      await fireEvent.press(screen.getByText('Reset'));
+      expect(stats()).toHaveTextContent('0Focus sessions0Focus minutes0Exercise sessions');
+    });
+
+    it('counts a break that ends at the moment of Pause', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      jest.setSystemTime(Date.now() + 5 * 60 * 1000 + 500);
+      await fireEvent.press(screen.getByText('Pause'));
+      expect(stats()).toHaveTextContent('1Focus sessions25Focus minutes1Exercise sessions');
+    });
+
+    it('rolls over at midnight while idle', async () => {
+      jest.setSystemTime(new Date(2026, 9, 27, 23, 59, 50).getTime());
+      await AsyncStorage.setItem(
+        'pomodoro.stats',
+        JSON.stringify({ date: '2026-10-27', focusSessions: 2, focusMinutes: 50, exerciseSessions: 1 }),
+      );
+      await render(<App />);
+      await advance(0);
+      expect(stats()).toHaveTextContent('2Focus sessions50Focus minutes1Exercise sessions');
+      await advance(20 * 1000);
+      expect(stats()).toHaveTextContent('0Focus sessions0Focus minutes0Exercise sessions');
+    });
+
     it('restores today from storage and saves new counts', async () => {
-      const day = new Date().toLocaleDateString('en-CA');
+      const day = dayKey(Date.now());
       await AsyncStorage.setItem(
         'pomodoro.stats',
         JSON.stringify({ date: day, focusSessions: 2, focusMinutes: 50, exerciseSessions: 1 }),

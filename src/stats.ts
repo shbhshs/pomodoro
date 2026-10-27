@@ -30,6 +30,23 @@ export function statsForDay(stats: DailyStats, now: number): DailyStats {
   return stats.date === dayKey(now) ? stats : emptyStats(now);
 }
 
+/** Milliseconds from `now` to the next local midnight. */
+export function msUntilNextDay(now: number): number {
+  const d = new Date(now);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() - now;
+}
+
+/** Adds up two records of the same day; for different days the later one wins. */
+export function mergeStats(a: DailyStats, b: DailyStats): DailyStats {
+  if (a.date !== b.date) return a.date > b.date ? a : b;
+  return {
+    date: a.date,
+    focusSessions: a.focusSessions + b.focusSessions,
+    focusMinutes: a.focusMinutes + b.focusMinutes,
+    exerciseSessions: a.exerciseSessions + b.exerciseSessions,
+  };
+}
+
 /** Counts a completion on the day of `at`, starting a new day if needed. */
 export function record(stats: DailyStats, kind: Completion, at: number): DailyStats {
   const today = statsForDay(stats, at);
@@ -46,11 +63,11 @@ export function record(stats: DailyStats, kind: Completion, at: number): DailySt
 /**
  * What finished between two timer states, if anything: a focus session that
  * ran to zero, or a break that ran to zero. Skipping and resetting count as
- * neither, because they leave the timer stopped or the session count alone.
+ * neither, because they leave both completion counters alone.
  */
 export function completionBetween(prev: TimerState, next: TimerState): Completion | null {
   if (next.completedFocusSessions > prev.completedFocusSessions) return 'focus';
-  if (prev.phase !== 'focus' && next.phase === 'focus' && next.running) return 'exercise';
+  if (next.completedBreaks > prev.completedBreaks) return 'exercise';
   return null;
 }
 
