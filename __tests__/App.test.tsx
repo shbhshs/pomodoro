@@ -37,6 +37,28 @@ describe('App', () => {
     expect(time()).toHaveTextContent('24:55');
   });
 
+  it('moves from focus into the break automatically and back', async () => {
+    await render(<App />);
+    await fireEvent.press(screen.getByText('Start'));
+    await advance(25 * 60 * 1000);
+    expect(screen.getByText('Short break')).toBeTruthy();
+    expect(screen.getByText(/Exercise break/)).toBeTruthy();
+    expect(time()).toHaveTextContent('05:00');
+
+    await advance(5 * 60 * 1000);
+    expect(screen.getByText('Focus')).toBeTruthy();
+    expect(time()).toHaveTextContent('25:00');
+  });
+
+  it('takes a long break after the 4th focus session', async () => {
+    await render(<App />);
+    await fireEvent.press(screen.getByText('Start'));
+    // Step by the minute: updates batch inside one act, so a single huge advance reads one late Date.now().
+    for (let i = 0; i < 3 * 30 + 25; i++) await advance(60 * 1000);
+    expect(screen.getByText('Long break')).toBeTruthy();
+    expect(time()).toHaveTextContent('15:00');
+  });
+
   it('resets to the full duration and stops', async () => {
     await render(<App />);
     await fireEvent.press(screen.getByText('Start'));

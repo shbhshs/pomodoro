@@ -29,6 +29,9 @@ export default function App() {
       <Text style={styles.time} accessibilityLabel="time remaining">
         {formatTime(displaySeconds(state))}
       </Text>
+      {state.phase !== 'focus' && (
+        <Text style={styles.placeholder}>Exercise break: move around until the timer ends.</Text>
+      )}
       <View style={styles.buttons}>
         <Pressable accessibilityRole="button" style={styles.button} onPress={toggle}>
           <Text style={styles.buttonText}>{state.running ? 'Pause' : 'Start'}</Text>
@@ -55,6 +58,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 20,
+    color: '#555',
+  },
+  placeholder: {
+    fontSize: 16,
     color: '#555',
   },
   buttons: {
