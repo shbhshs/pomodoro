@@ -5,7 +5,7 @@ import type { Phase } from './timer';
 /** What the notification says when `phase` is the one that just ended. */
 export function phaseEndMessage(phase: Phase): { title: string; body: string } {
   if (phase === 'focus') {
-    return { title: 'Focus session done', body: 'Time for your exercise break. Tap to start.' };
+    return { title: 'Focus session done', body: 'Time for your exercise break.' };
   }
   return { title: 'Break over', body: 'Ready for the next focus session?' };
 }
@@ -25,8 +25,4 @@ export async function schedulePhaseEnd(phase: Phase, endsAt: number): Promise<st
     content: phaseEndMessage(phase),
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(endsAt) },
   });
-}
-
-export async function cancelPhaseEnd(id: string): Promise<void> {
-  await Notifications.cancelScheduledNotificationAsync(id);
 }

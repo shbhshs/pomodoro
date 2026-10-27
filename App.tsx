@@ -1,10 +1,11 @@
+import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
-import { cancelPhaseEnd, schedulePhaseEnd } from './src/notifications';
 import { BODY_PARTS, buildRoutine } from './src/exercises';
+import { schedulePhaseEnd } from './src/notifications';
 import { nextExercise, routineElapsedMs } from './src/session';
 import { formatTime } from './src/time';
 import {
@@ -40,7 +41,9 @@ export default function App() {
     if (!state.running || state.endsAt === null) return;
     const scheduled = schedulePhaseEnd(state.phase, state.endsAt).catch(() => null);
     return () => {
-      void scheduled.then((id) => (id ? cancelPhaseEnd(id) : undefined));
+      void scheduled
+        .then((id) => (id ? Notifications.cancelScheduledNotificationAsync(id) : undefined))
+        .catch(() => undefined);
     };
   }, [state.running, state.endsAt, state.phase]);
 

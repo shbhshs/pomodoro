@@ -100,6 +100,34 @@ describe('App', () => {
       await advance(25 * 60 * 1000);
       expect(scheduled).toHaveBeenCalledTimes(2);
       expect(cancelled).toHaveBeenCalledTimes(1);
+      const second = scheduled.mock.calls[1][0] as unknown as {
+        content: { title: string };
+        trigger: { date: Date };
+      };
+      expect(second.content.title).toBe('Break over');
+      expect(second.trigger.date.getTime()).toBe(Date.now() + 5 * 60 * 1000);
+    });
+
+    it('cancels on Skip break and does not schedule while stopped', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      cancelled.mockClear();
+      scheduled.mockClear();
+      await fireEvent.press(screen.getByText('Skip break'));
+      expect(cancelled).toHaveBeenCalledWith('note-id');
+      expect(scheduled).not.toHaveBeenCalled();
+    });
+
+    it('schedules nothing without permission, and Start still works', async () => {
+      jest
+        .mocked(Notifications.getPermissionsAsync)
+        .mockResolvedValueOnce({ granted: false, canAskAgain: false } as never);
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(3000);
+      expect(scheduled).not.toHaveBeenCalled();
+      expect(time()).toHaveTextContent('24:57');
     });
   });
 
