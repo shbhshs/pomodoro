@@ -6,6 +6,8 @@ export interface TimerState {
   remainingMs: number;
   running: boolean;
   completedFocusSessions: number;
+  /** Breaks that ran to zero; skipping or resetting a break does not count. */
+  completedBreaks: number;
   /** Timestamp (ms) at which the current phase ends; set only while running. */
   endsAt: number | null;
   /** Time jumped ahead in the break's exercise routine by "Next exercise". */
@@ -26,17 +28,23 @@ export function initialState(): TimerState {
     remainingMs: DURATIONS.focus * 1000,
     running: false,
     completedFocusSessions: 0,
+    completedBreaks: 0,
     endsAt: null,
     skippedMs: 0,
   };
 }
 
-function enterPhase(phase: Phase, completedFocusSessions: number): TimerState {
+function enterPhase(
+  phase: Phase,
+  completedFocusSessions: number,
+  completedBreaks: number,
+): TimerState {
   return {
     phase,
     remainingMs: DURATIONS[phase] * 1000,
     running: false,
     completedFocusSessions,
+    completedBreaks,
     endsAt: null,
     skippedMs: 0,
   };
@@ -71,7 +79,7 @@ export function pause(state: TimerState, now: number): TimerState {
 
 /** Restores the current phase to its full duration, stopped. */
 export function reset(state: TimerState): TimerState {
-  return enterPhase(state.phase, state.completedFocusSessions);
+  return enterPhase(state.phase, state.completedFocusSessions, state.completedBreaks);
 }
 
 /**
@@ -89,9 +97,10 @@ export function tick(state: TimerState, now: number): TimerState {
     next = enterPhase(
       completed % SESSIONS_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak',
       completed,
+      state.completedBreaks,
     );
   } else {
-    next = enterPhase('focus', state.completedFocusSessions);
+    next = enterPhase('focus', state.completedFocusSessions, state.completedBreaks + 1);
   }
   // The next phase starts exactly when this one ended, so no time is lost to
   // tick granularity. After a long gap it starts now instead of cascading.
@@ -105,5 +114,9 @@ export function tick(state: TimerState, now: number): TimerState {
  * focus session does not count it and leads to a short break.
  */
 export function skip(state: TimerState): TimerState {
-  return enterPhase(state.phase === 'focus' ? 'shortBreak' : 'focus', state.completedFocusSessions);
+  return enterPhase(
+    state.phase === 'focus' ? 'shortBreak' : 'focus',
+    state.completedFocusSessions,
+    state.completedBreaks,
+  );
 }

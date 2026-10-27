@@ -126,6 +126,23 @@ describe('timer', () => {
     expect(skip(running())).toMatchObject({ phase: 'shortBreak', running: false, completedFocusSessions: 0 });
   });
 
+  describe('completedBreaks', () => {
+    it.each(['shortBreak', 'longBreak'] as const)('a %s that runs to zero counts', (phase) => {
+      const s = tick(running({ phase, remainingMs: DURATIONS[phase] * 1000 }), T0 + DURATIONS[phase] * 1000);
+      expect(s.completedBreaks).toBe(1);
+    });
+
+    it('a focus session that runs to zero does not count', () => {
+      expect(tick(running(), T0 + DURATIONS.focus * 1000).completedBreaks).toBe(0);
+    });
+
+    it('skip and reset keep the count', () => {
+      const s = running({ phase: 'shortBreak', remainingMs: 300_000, completedBreaks: 2 });
+      expect(skip(s).completedBreaks).toBe(2);
+      expect(reset(s).completedBreaks).toBe(2);
+    });
+  });
+
   it('skip from a break goes to focus', () => {
     expect(skip({ ...initialState(), phase: 'longBreak', completedFocusSessions: 4 })).toMatchObject({
       phase: 'focus',

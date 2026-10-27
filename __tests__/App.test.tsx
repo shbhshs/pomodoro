@@ -1,9 +1,11 @@
 import { act } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
 import App from '../App';
+import { dayKey } from '../src/stats';
 
 jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
@@ -12,6 +14,10 @@ jest.mock('expo-notifications', () => ({
   cancelScheduledNotificationAsync: jest.fn(async () => undefined),
   SchedulableTriggerInputTypes: { DATE: 'date' },
 }));
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
 
 const scheduled = jest.mocked(Notifications.scheduleNotificationAsync);
 const cancelled = jest.mocked(Notifications.cancelScheduledNotificationAsync);
@@ -25,7 +31,8 @@ async function advance(ms: number) {
 }
 
 describe('App', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
     jest.clearAllMocks();
     jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
   });
@@ -71,6 +78,91 @@ describe('App', () => {
     for (let i = 0; i < 3 * 30 + 25; i++) await advance(60 * 1000);
     expect(screen.getByText('Long break')).toBeTruthy();
     expect(time()).toHaveTextContent('15:00');
+  });
+
+  describe('today stats', () => {
+    const stats = () => screen.getByLabelText('today stats');
+
+    it('shows zeros, then counts a finished focus session and break', async () => {
+      await render(<App />);
+      expect(stats()).toHaveTextContent('0Focus sessions0Focus minutes0Exercise sessions');
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      expect(stats()).toHaveTextContent('1Focus sessions25Focus minutes0Exercise sessions');
+      await advance(5 * 60 * 1000);
+      expect(stats()).toHaveTextContent('1Focus sessions25Focus minutes1Exercise sessions');
+    });
+
+    it('does not count a skipped break', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      await fireEvent.press(screen.getByText('Skip break'));
+      expect(stats()).toHaveTextContent('1Focus sessions25Focus minutes0Exercise sessions');
+    });
+
+    it('does not count a reset', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(60 * 1000);
+      await fireEvent.press(screen.getByText('Reset'));
+      expect(stats()).toHaveTextContent('0Focus sessions0Focus minutes0Exercise sessions');
+    });
+
+    it('counts a break that ends at the moment of Pause', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      jest.setSystemTime(Date.now() + 5 * 60 * 1000 + 500);
+      await fireEvent.press(screen.getByText('Pause'));
+      expect(stats()).toHaveTextContent('1Focus sessions25Focus minutes1Exercise sessions');
+    });
+
+    it('rolls over at midnight while idle', async () => {
+      jest.setSystemTime(new Date(2026, 9, 27, 23, 59, 50).getTime());
+      await AsyncStorage.setItem(
+        'pomodoro.stats',
+        JSON.stringify({ date: '2026-10-27', focusSessions: 2, focusMinutes: 50, exerciseSessions: 1 }),
+      );
+      await render(<App />);
+      await advance(0);
+      expect(stats()).toHaveTextContent('2Focus sessions50Focus minutes1Exercise sessions');
+      await advance(20 * 1000);
+      expect(stats()).toHaveTextContent('0Focus sessions0Focus minutes0Exercise sessions');
+    });
+
+    it('keeps a completion that happens before the saved stats finish loading', async () => {
+      const day = dayKey(Date.now());
+      let release!: (value: string) => void;
+      jest.spyOn(AsyncStorage, 'getItem').mockImplementationOnce(
+        () => new Promise<string | null>((resolve) => (release = resolve)),
+      );
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      expect(stats()).toHaveTextContent('1Focus sessions25Focus minutes0Exercise sessions');
+      await act(async () => {
+        release(JSON.stringify({ date: day, focusSessions: 2, focusMinutes: 50, exerciseSessions: 1 }));
+      });
+      expect(stats()).toHaveTextContent('3Focus sessions75Focus minutes1Exercise sessions');
+      const saved = JSON.parse((await AsyncStorage.getItem('pomodoro.stats'))!);
+      expect(saved).toMatchObject({ focusSessions: 3, focusMinutes: 75, exerciseSessions: 1 });
+    });
+
+    it('restores today from storage and saves new counts', async () => {
+      const day = dayKey(Date.now());
+      await AsyncStorage.setItem(
+        'pomodoro.stats',
+        JSON.stringify({ date: day, focusSessions: 2, focusMinutes: 50, exerciseSessions: 1 }),
+      );
+      await render(<App />);
+      await advance(0);
+      expect(stats()).toHaveTextContent('2Focus sessions50Focus minutes1Exercise sessions');
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      const saved = JSON.parse((await AsyncStorage.getItem('pomodoro.stats'))!);
+      expect(saved.focusSessions).toBe(3);
+    });
   });
 
   describe('notifications', () => {

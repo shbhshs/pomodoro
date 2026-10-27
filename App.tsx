@@ -1,12 +1,23 @@
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
 import { BODY_PARTS, buildRoutine } from './src/exercises';
 import { schedulePhaseEnd } from './src/notifications';
 import { nextExercise, routineElapsedMs } from './src/session';
+import {
+  completionBetween,
+  emptyStats,
+  loadStats,
+  mergeStats,
+  msUntilNextDay,
+  record,
+  saveStats,
+  statsForDay,
+} from './src/stats';
+import { theme } from './src/theme';
 import { formatTime } from './src/time';
 import {
   DURATIONS,
@@ -47,6 +58,53 @@ export default function App() {
     };
   }, [state.running, state.endsAt, state.phase]);
 
+  const [stats, setStats] = useState(() => emptyStats(Date.now()));
+  const statsLoaded = useRef(false);
+  const previous = useRef(state);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadStats(Date.now()).then((saved) => {
+      if (cancelled) return;
+      // Keep anything completed while the saved stats were loading.
+      setStats((current) => mergeStats(saved, current));
+      statsLoaded.current = true;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Count a phase that ran to zero on the day it ended, even if the app only
+  // noticed later.
+  useEffect(() => {
+    const prev = previous.current;
+    previous.current = state;
+    const completed = completionBetween(prev, state);
+    if (completed) setStats((s) => record(s, completed, prev.endsAt ?? Date.now()));
+  }, [state]);
+
+  useEffect(() => {
+    if (statsLoaded.current) void saveStats(stats);
+  }, [stats]);
+
+  // Only forces a re-render at local midnight and when the app returns to the
+  // foreground, so an idle screen does not keep showing yesterday's numbers.
+  // Its value is never read; the day always comes from Date.now().
+  const [dayTick, setDayTick] = useState(0);
+  useEffect(() => {
+    const id = setTimeout(() => setDayTick((n) => n + 1), msUntilNextDay(Date.now()) + 50);
+    return () => clearTimeout(id);
+  }, [dayTick]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') setDayTick((n) => n + 1);
+    });
+    return () => sub.remove();
+  }, []);
+
+  const today = statsForDay(stats, Date.now());
+
   const routine = useMemo(
     () => (state.phase === 'focus' ? [] : buildRoutine(DURATIONS[state.phase], BODY_PARTS)),
     [state.phase],
@@ -69,6 +127,11 @@ export default function App() {
           onSkipBreak={() => setState((s) => skip(s))}
         />
       )}
+      <View style={styles.stats} accessibilityLabel="today stats">
+        <Stat value={today.focusSessions} label="Focus sessions" />
+        <Stat value={today.focusMinutes} label="Focus minutes" />
+        <Stat value={today.exerciseSessions} label="Exercise sessions" />
+      </View>
       <View style={styles.buttons}>
         <Pressable accessibilityRole="button" style={styles.button} onPress={toggle}>
           <Text style={styles.buttonText}>{state.running ? 'Pause' : 'Start'}</Text>
@@ -85,7 +148,34 @@ export default function App() {
   );
 }
 
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  stats: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    marginHorizontal: 28,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.focus.border,
+    backgroundColor: theme.focus.background,
+  },
+  stat: { flex: 1, alignItems: 'center', gap: 4 },
+  statValue: {
+    color: theme.focus.text,
+    fontSize: 30,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  statLabel: { color: theme.focus.textMuted, fontSize: 14 },
   container: {
     flex: 1,
     backgroundColor: '#fff',

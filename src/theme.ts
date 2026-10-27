@@ -1,5 +1,11 @@
 /** Colour tokens from docs/design.md. Screens import from here; no hex values elsewhere. */
 export const theme = {
+  focus: {
+    background: '#1B1412',
+    border: '#3A2E29',
+    text: '#F6EFE9',
+    textMuted: '#A89A90',
+  },
   break: {
     background: '#0F1B1A',
     surface: '#162826',
