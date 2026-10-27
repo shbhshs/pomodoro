@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
+import { cancelPhaseEnd, schedulePhaseEnd } from './src/notifications';
 import { BODY_PARTS, buildRoutine } from './src/exercises';
 import { nextExercise, routineElapsedMs } from './src/session';
 import { formatTime } from './src/time';
@@ -32,6 +33,16 @@ export default function App() {
     const id = setInterval(() => setState((s) => tick(s, Date.now())), 1000);
     return () => clearInterval(id);
   }, [state.running]);
+
+  // One notification per running phase; pausing, resetting, skipping or the
+  // phase rolling over changes endsAt and replaces it.
+  useEffect(() => {
+    if (!state.running || state.endsAt === null) return;
+    const scheduled = schedulePhaseEnd(state.phase, state.endsAt).catch(() => null);
+    return () => {
+      void scheduled.then((id) => (id ? cancelPhaseEnd(id) : undefined));
+    };
+  }, [state.running, state.endsAt, state.phase]);
 
   const routine = useMemo(
     () => (state.phase === 'focus' ? [] : buildRoutine(DURATIONS[state.phase], BODY_PARTS)),

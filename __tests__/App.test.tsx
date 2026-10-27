@@ -1,7 +1,20 @@
 import { act } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
+import * as Notifications from 'expo-notifications';
+
 import App from '../App';
+
+jest.mock('expo-notifications', () => ({
+  getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
+  scheduleNotificationAsync: jest.fn(async () => 'note-id'),
+  cancelScheduledNotificationAsync: jest.fn(async () => undefined),
+  SchedulableTriggerInputTypes: { DATE: 'date' },
+}));
+
+const scheduled = jest.mocked(Notifications.scheduleNotificationAsync);
+const cancelled = jest.mocked(Notifications.cancelScheduledNotificationAsync);
 
 const time = () => screen.getByLabelText('time remaining');
 
@@ -12,9 +25,10 @@ async function advance(ms: number) {
 }
 
 describe('App', () => {
-  beforeEach(() =>
-    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] }),
-  );
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+  });
   afterEach(() => jest.useRealTimers());
 
   it('shows a 25 minute focus session', async () => {
@@ -57,6 +71,36 @@ describe('App', () => {
     for (let i = 0; i < 3 * 30 + 25; i++) await advance(60 * 1000);
     expect(screen.getByText('Long break')).toBeTruthy();
     expect(time()).toHaveTextContent('15:00');
+  });
+
+  describe('notifications', () => {
+    it('schedules the phase end on Start and cancels it on Pause', async () => {
+      await render(<App />);
+      const t0 = Date.now();
+      await fireEvent.press(screen.getByText('Start'));
+      expect(scheduled).toHaveBeenCalledTimes(1);
+      const request = scheduled.mock.calls[0][0] as unknown as { trigger: { date: Date } };
+      expect(request.trigger.date.getTime()).toBe(t0 + 25 * 60 * 1000);
+      expect(cancelled).not.toHaveBeenCalled();
+
+      await fireEvent.press(screen.getByText('Pause'));
+      expect(cancelled).toHaveBeenCalledWith('note-id');
+    });
+
+    it('cancels on Reset', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await fireEvent.press(screen.getByText('Reset'));
+      expect(cancelled).toHaveBeenCalledWith('note-id');
+    });
+
+    it('schedules the break end when focus rolls into the break', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      expect(scheduled).toHaveBeenCalledTimes(2);
+      expect(cancelled).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('resets to the full duration and stops', async () => {
