@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { EXERCISE_ANIMATIONS } from '../components/ExerciseAnimation';
 import type { Exercise } from '../src/exercises';
 import { exerciseSeconds, positionAt } from '../src/session';
 import { theme } from '../src/theme';
@@ -19,6 +20,7 @@ export default function BreakScreen({ routine, elapsedMs, onNext, onSkipBreak }:
   const position = positionAt(routine, elapsedMs);
   const exercise = routine[position.index];
   if (!exercise) return null;
+  const Demo = EXERCISE_ANIMATIONS[exercise.illustration];
 
   return (
     <View style={styles.container}>
@@ -37,7 +39,9 @@ export default function BreakScreen({ routine, elapsedMs, onNext, onSkipBreak }:
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         style={styles.demo}
-      />
+      >
+        {Demo ? <Demo key={exercise.id} /> : null}
+      </View>
       <Text style={styles.name}>{exercise.name}</Text>
       <View>
         {exercise.steps.map((step, i) => (
@@ -73,7 +77,14 @@ const styles = StyleSheet.create({
   segments: { flexDirection: 'row', gap: 8 },
   segment: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.track },
   segmentActive: { backgroundColor: colors.accent },
-  demo: { height: 300, borderRadius: 28, backgroundColor: colors.surface },
+  demo: {
+    height: 300,
+    borderRadius: 28,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   name: { color: colors.text, fontSize: 30, fontWeight: '700' },
   step: { color: colors.textBody, fontSize: 18 },
   countdown: {
