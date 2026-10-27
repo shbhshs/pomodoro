@@ -1,10 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
 import { BODY_PARTS, buildRoutine } from './src/exercises';
-import { skipAheadMs } from './src/session';
+import { nextExercise, routineElapsedMs } from './src/session';
 import { formatTime } from './src/time';
 import {
   DURATIONS,
@@ -33,25 +33,10 @@ export default function App() {
     return () => clearInterval(id);
   }, [state.running]);
 
-  // Time jumped ahead by "Next exercise", valid only for the break it was made in.
-  const [skipped, setSkipped] = useState({ key: '', ms: 0 });
-  const breakKey = `${state.phase}-${state.completedFocusSessions}`;
-  const skippedMs = skipped.key === breakKey ? skipped.ms : 0;
-  const routine = useMemo(() => buildRoutine(DURATIONS[state.phase], BODY_PARTS), [state.phase]);
-  const elapsedMs = DURATIONS[state.phase] * 1000 - state.remainingMs + skippedMs;
+  const routine = buildRoutine(DURATIONS[state.phase], BODY_PARTS);
 
   const toggle = () =>
     setState((s) => (s.running ? pause(s, Date.now()) : start(s, Date.now())));
-
-  const nextExercise = () => {
-    // Refresh from the clock first, so the next exercise starts now rather
-    // than up to a tick late.
-    const fresh = tick(state, Date.now());
-    setState(fresh);
-    if (fresh.phase !== state.phase) return;
-    const freshElapsedMs = DURATIONS[fresh.phase] * 1000 - fresh.remainingMs + skippedMs;
-    setSkipped({ key: breakKey, ms: skippedMs + skipAheadMs(routine, freshElapsedMs) });
-  };
 
   return (
     <View style={styles.container}>
@@ -62,8 +47,8 @@ export default function App() {
       {state.phase !== 'focus' && (
         <BreakScreen
           routine={routine}
-          elapsedMs={elapsedMs}
-          onNext={nextExercise}
+          elapsedMs={routineElapsedMs(state)}
+          onNext={() => setState((s) => nextExercise(s, routine, Date.now()))}
           onSkipBreak={() => setState((s) => skip(s))}
         />
       )}
@@ -74,10 +59,7 @@ export default function App() {
         <Pressable
           accessibilityRole="button"
           style={styles.button}
-          onPress={() => {
-            setState((s) => reset(s));
-            setSkipped({ key: '', ms: 0 });
-          }}>
+          onPress={() => setState((s) => reset(s))}>
           <Text style={styles.buttonText}>Reset</Text>
         </Pressable>
       </View>

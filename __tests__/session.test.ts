@@ -1,5 +1,12 @@
 import { BODY_PARTS, buildRoutine, EXERCISES } from '../src/exercises';
-import { exerciseSeconds, positionAt, skipAheadMs } from '../src/session';
+import {
+  exerciseSeconds,
+  nextExercise,
+  positionAt,
+  routineElapsedMs,
+  skipAheadMs,
+} from '../src/session';
+import { DURATIONS, initialState, skip, start } from '../src/timer';
 
 const routine = EXERCISES.slice(0, 3);
 
@@ -29,6 +36,37 @@ describe('exercise session', () => {
     expect(p.index).toBe(1);
     expect(exerciseSeconds(p)).toBe(60);
     expect(skipAheadMs(routine, 150_000)).toBe(0);
+  });
+
+  describe('nextExercise', () => {
+    const t0 = 1_000_000;
+    const inBreak = () => {
+      let s = start(skip(initialState()), t0);
+      s = nextExercise(s, routine, t0 + 10_000);
+      return s;
+    };
+
+    it('starts the next exercise at the given time', () => {
+      const s = inBreak();
+      const p = positionAt(routine, routineElapsedMs(s));
+      expect(p.index).toBe(1);
+      expect(exerciseSeconds(p)).toBe(60);
+    });
+
+    it('does not carry into a break reached by skipping focus', () => {
+      // Same phase and completedFocusSessions as the first break.
+      const second = skip(skip(inBreak()));
+      expect(second.phase).toBe('shortBreak');
+      expect(second.completedFocusSessions).toBe(0);
+      expect(positionAt(routine, routineElapsedMs(second)).index).toBe(0);
+    });
+
+    it('only advances the timer when the break already ended', () => {
+      const s = inBreak();
+      const after = nextExercise(s, routine, t0 + 10_000 + DURATIONS.shortBreak * 1000);
+      expect(after.phase).toBe('focus');
+      expect(after.skippedMs).toBe(0);
+    });
   });
 
   it('covers a long break with one exercise per minute, ending on the 15th', () => {

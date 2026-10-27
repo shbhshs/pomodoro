@@ -1,4 +1,5 @@
 import type { Exercise } from './exercises';
+import { DURATIONS, tick, type TimerState } from './timer';
 
 export interface ExercisePosition {
   /** Index of the current exercise in the routine. */
@@ -7,28 +8,19 @@ export interface ExercisePosition {
   remainingMs: number;
 }
 
-/** Milliseconds from the start of the break at which exercise `index` starts. */
-function startOf(routine: Exercise[], index: number): number {
-  let ms = 0;
-  for (let i = 0; i < index; i++) ms += routine[i].durationSeconds * 1000;
-  return ms;
-}
-
 /**
  * Where the routine is after `elapsedMs` of the break, which the caller takes
  * from the timer state so that pausing the timer pauses the routine. The last
- * exercise stays current, at 0, until the break ends. The routine must not be
- * empty.
+ * exercise stays current, at 0, until the break ends.
  */
 export function positionAt(routine: Exercise[], elapsedMs: number): ExercisePosition {
   const last = routine.length - 1;
-  let start = 0;
+  let end = 0;
   for (let index = 0; index < last; index++) {
-    const end = start + routine[index].durationSeconds * 1000;
+    end += routine[index].durationSeconds * 1000;
     if (elapsedMs < end) return { index, remainingMs: end - elapsedMs };
-    start = end;
   }
-  const end = start + routine[last].durationSeconds * 1000;
+  end += routine[last].durationSeconds * 1000;
   return { index: last, remainingMs: Math.max(0, end - elapsedMs) };
 }
 
@@ -42,7 +34,21 @@ export function exerciseSeconds(position: ExercisePosition): number {
  * now. Returns 0 on the last exercise.
  */
 export function skipAheadMs(routine: Exercise[], elapsedMs: number): number {
-  const { index } = positionAt(routine, elapsedMs);
-  if (index >= routine.length - 1) return 0;
-  return startOf(routine, index + 1) - elapsedMs;
+  const { index, remainingMs } = positionAt(routine, elapsedMs);
+  return index >= routine.length - 1 ? 0 : remainingMs;
+}
+
+/** Milliseconds of the routine that have passed, including "Next exercise" jumps. */
+export function routineElapsedMs(state: TimerState): number {
+  return DURATIONS[state.phase] * 1000 - state.remainingMs + state.skippedMs;
+}
+
+/**
+ * Starts the next exercise now. The offset lives in the timer state, so it
+ * ends with the break. If the break ended by `now`, only the timer advances.
+ */
+export function nextExercise(state: TimerState, routine: Exercise[], now: number): TimerState {
+  const fresh = tick(state, now);
+  if (fresh.phase !== state.phase) return fresh;
+  return { ...fresh, skippedMs: fresh.skippedMs + skipAheadMs(routine, routineElapsedMs(fresh)) };
 }

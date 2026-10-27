@@ -2,7 +2,6 @@ import { act } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import App from '../App';
-import BreakScreen from '../screens/BreakScreen';
 
 const time = () => screen.getByLabelText('time remaining');
 
@@ -160,15 +159,12 @@ describe('App', () => {
       expect(exerciseTime()).toHaveTextContent('00:01');
     });
 
-    it('renders nothing for an empty routine', async () => {
-      await render(<BreakScreen routine={[]} elapsedMs={0} onNext={() => {}} onSkipBreak={() => {}} />);
-      expect(screen.queryByText('MOVEMENT BREAK')).toBeNull();
-    });
-
-    it('Skip break returns to focus', async () => {
+    it('Skip break returns to a stopped, full focus session', async () => {
       await startBreak();
       await fireEvent.press(screen.getByText('Skip break'));
       expect(screen.getByText('Focus')).toBeTruthy();
+      expect(time()).toHaveTextContent('25:00');
+      expect(screen.getByText('Start')).toBeTruthy();
       expect(screen.queryByText('MOVEMENT BREAK')).toBeNull();
     });
   });

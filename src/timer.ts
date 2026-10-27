@@ -8,6 +8,8 @@ export interface TimerState {
   completedFocusSessions: number;
   /** Timestamp (ms) at which the current phase ends; set only while running. */
   endsAt: number | null;
+  /** Time jumped ahead in the break's exercise routine by "Next exercise". */
+  skippedMs: number;
 }
 
 export const DURATIONS: Record<Phase, number> = {
@@ -25,6 +27,7 @@ export function initialState(): TimerState {
     running: false,
     completedFocusSessions: 0,
     endsAt: null,
+    skippedMs: 0,
   };
 }
 
@@ -35,6 +38,7 @@ function enterPhase(phase: Phase, completedFocusSessions: number): TimerState {
     running: false,
     completedFocusSessions,
     endsAt: null,
+    skippedMs: 0,
   };
 }
 
