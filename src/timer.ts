@@ -72,19 +72,28 @@ export function reset(state: TimerState): TimerState {
 
 /**
  * Recomputes remaining time from timestamps, so it stays correct after the
- * app was backgrounded. When the phase ends it advances to the next phase,
- * stopped, awaiting `start`.
+ * app was backgrounded. When the phase ends it advances to the next phase and
+ * keeps running.
  */
 export function tick(state: TimerState, now: number): TimerState {
   if (!state.running) return state;
   const remaining = remainingAt(state, now);
   if (remaining > 0) return { ...state, remainingMs: remaining };
+  let next: TimerState;
   if (state.phase === 'focus') {
     const completed = state.completedFocusSessions + 1;
-    const next = completed % SESSIONS_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
-    return enterPhase(next, completed);
+    next = enterPhase(
+      completed % SESSIONS_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak',
+      completed,
+    );
+  } else {
+    next = enterPhase('focus', state.completedFocusSessions);
   }
-  return enterPhase('focus', state.completedFocusSessions);
+  // The next phase starts exactly when this one ended, so no time is lost to
+  // tick granularity. After a long gap it starts now instead of cascading.
+  const nextEnd = (state.endsAt ?? now) + next.remainingMs;
+  const endsAt = nextEnd > now ? nextEnd : now + next.remainingMs;
+  return { ...next, running: true, endsAt, remainingMs: endsAt - now };
 }
 
 /**

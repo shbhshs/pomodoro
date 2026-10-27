@@ -43,11 +43,11 @@ describe('timer', () => {
     expect(pause(s, T0)).toBe(s);
   });
 
-  it('pause after the phase ended counts the session and advances, stopped', () => {
+  it('pause after the phase ended counts the session, advances and freezes the new phase', () => {
     const s = pause(running(), T0 + DURATIONS.focus * 1000 + 5000);
     expect(s).toMatchObject({
       phase: 'shortBreak',
-      remainingMs: 300_000,
+      remainingMs: 295_000,
       running: false,
       completedFocusSessions: 1,
       endsAt: null,
@@ -77,13 +77,36 @@ describe('timer', () => {
 
   it('finishing focus moves to a short break and counts the session', () => {
     const s = tick(running(), T0 + DURATIONS.focus * 1000);
-    expect(s).toMatchObject({ phase: 'shortBreak', remainingMs: 300_000, running: false, completedFocusSessions: 1 });
+    expect(s).toMatchObject({ phase: 'shortBreak', remainingMs: 300_000, running: true, completedFocusSessions: 1 });
+  });
+
+  it('runs the full cycle automatically: 4 focus sessions, short breaks, then a long break', () => {
+    let s = running();
+    let now = T0;
+    const seen: string[] = [];
+    for (let i = 0; i < 8; i++) {
+      seen.push(s.phase);
+      now += DURATIONS[s.phase] * 1000;
+      s = tick(s, now);
+      expect(s.running).toBe(true);
+    }
+    expect(seen).toEqual([
+      'focus', 'shortBreak', 'focus', 'shortBreak', 'focus', 'shortBreak', 'focus', 'longBreak',
+    ]);
+    expect(s.phase).toBe('focus');
+    expect(s.completedFocusSessions).toBe(4);
+  });
+
+  it('carries late ticks into the next phase instead of losing time', () => {
+    const s = tick(running(), T0 + DURATIONS.focus * 1000 + 700);
+    expect(s).toMatchObject({ phase: 'shortBreak', remainingMs: 299_300 });
   });
 
   it('handles a long background gap by finishing the phase once', () => {
     const s = tick(running(), T0 + 10 * 60 * 60 * 1000);
     expect(s.phase).toBe('shortBreak');
     expect(s.completedFocusSessions).toBe(1);
+    expect(s.remainingMs).toBe(300_000);
   });
 
   it('finishing the 4th focus session moves to a long break', () => {
@@ -96,7 +119,7 @@ describe('timer', () => {
       running({ phase, remainingMs: DURATIONS[phase] * 1000, completedFocusSessions: 4 }),
       T0 + DURATIONS[phase] * 1000,
     );
-    expect(s).toMatchObject({ phase: 'focus', remainingMs: 1_500_000, running: false, completedFocusSessions: 4 });
+    expect(s).toMatchObject({ phase: 'focus', remainingMs: 1_500_000, running: true, completedFocusSessions: 4 });
   });
 
   it('skip from focus goes to a short break without counting the session', () => {
