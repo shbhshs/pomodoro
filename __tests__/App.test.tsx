@@ -131,6 +131,24 @@ describe('App', () => {
       expect(stats()).toHaveTextContent('0Focus sessions0Focus minutes0Exercise sessions');
     });
 
+    it('keeps a completion that happens before the saved stats finish loading', async () => {
+      const day = dayKey(Date.now());
+      let release!: (value: string) => void;
+      jest.spyOn(AsyncStorage, 'getItem').mockImplementationOnce(
+        () => new Promise<string | null>((resolve) => (release = resolve)),
+      );
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      expect(stats()).toHaveTextContent('1Focus sessions25Focus minutes0Exercise sessions');
+      await act(async () => {
+        release(JSON.stringify({ date: day, focusSessions: 2, focusMinutes: 50, exerciseSessions: 1 }));
+      });
+      expect(stats()).toHaveTextContent('3Focus sessions75Focus minutes1Exercise sessions');
+      const saved = JSON.parse((await AsyncStorage.getItem('pomodoro.stats'))!);
+      expect(saved).toMatchObject({ focusSessions: 3, focusMinutes: 75, exerciseSessions: 1 });
+    });
+
     it('restores today from storage and saves new counts', async () => {
       const day = dayKey(Date.now());
       await AsyncStorage.setItem(

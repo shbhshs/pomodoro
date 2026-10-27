@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Pressable,StyleSheet, Text, View } from 'react-native';
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
 import { BODY_PARTS, buildRoutine } from './src/exercises';
@@ -88,21 +88,22 @@ export default function App() {
     if (statsLoaded.current) void saveStats(stats);
   }, [stats]);
 
-  // Re-render at local midnight and when the app returns to the foreground,
-  // so an idle screen does not keep showing yesterday's numbers.
-  const [clock, setClock] = useState(() => Date.now());
+  // Only forces a re-render at local midnight and when the app returns to the
+  // foreground, so an idle screen does not keep showing yesterday's numbers.
+  // Its value is never read; the day always comes from Date.now().
+  const [dayTick, setDayTick] = useState(0);
   useEffect(() => {
-    const id = setTimeout(() => setClock(Date.now()), msUntilNextDay(clock) + 50);
+    const id = setTimeout(() => setDayTick((n) => n + 1), msUntilNextDay(Date.now()) + 50);
     return () => clearTimeout(id);
-  }, [clock]);
+  }, [dayTick]);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'active') setClock(Date.now());
+      if (next === 'active') setDayTick((n) => n + 1);
     });
     return () => sub.remove();
   }, []);
 
-  const today = statsForDay(stats, Math.max(clock, Date.now()));
+  const today = statsForDay(stats, Date.now());
 
   const routine = useMemo(
     () => (state.phase === 'focus' ? [] : buildRoutine(DURATIONS[state.phase], BODY_PARTS)),
