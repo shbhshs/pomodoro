@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import Animated, {
   Easing,
-  cancelAnimation,
   useAnimatedProps,
   useSharedValue,
   withRepeat,
@@ -19,21 +18,18 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface Props {
   animation: Animation;
-  size?: number;
 }
 
-/** A looping stick figure driven by the keyframes of `animation`. Decorative, so hidden from screen readers. */
-export default function StickFigure({ animation, size = 280 }: Props) {
+/** A looping stick figure driven by the keyframes of `animation`, sized to the 300 high demo card. */
+export default function StickFigure({ animation }: Props) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = 0;
     progress.value = withRepeat(
       withTiming(1, { duration: animation.durationMs, easing: Easing.linear }),
       -1,
       false,
     );
-    return () => cancelAnimation(progress);
   }, [animation, progress]);
 
   const bodyProps = useAnimatedProps(() => ({
@@ -50,13 +46,7 @@ export default function StickFigure({ animation, size = 280 }: Props) {
   const initial = geometryOf(poseAt(animation, 0));
 
   return (
-    <Svg
-      width={size}
-      height={size * 1.5}
-      viewBox={VIEW_BOX}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
+    <Svg width={200} height={300} viewBox={VIEW_BOX}>
       <AnimatedPath
         d={initial.body}
         animatedProps={bodyProps}

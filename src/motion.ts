@@ -178,24 +178,25 @@ export function geometryOf(pose: Pose): Geometry {
   const face = `M ${f(faceX)} ${f(faceY)} L ${f(faceX + Math.sin(tilt) * 2)} ${f(faceY + 7)}`;
 
   // Shoulders narrow as the torso twists.
-  const half = 42 * Math.cos(rad(pose.twist));
+  const half = 30 * Math.cos(rad(pose.twist));
   const slide = Math.sin(rad(pose.twist)) * 10;
   const lsx = neckX - half + slide;
   const rsx = neckX + half + slide;
   const lsy = neckY + 6 - pose.shoulderL;
   const rsy = neckY + 6 - pose.shoulderR;
 
-  // Arms: upper arm 44, forearm 40, hand 12. `side` is -1 for left, 1 for right.
+  // Arms: upper arm 28, forearm 26, hand 10. `side` is -1 for left, 1 for right.
+  // With the shoulders 30 from the centre, outstretched arms reach 94 and stay inside the view box.
   const limb = (sx: number, sy: number, side: number) => {
     const upper = rad(pose.arm * side);
-    const ex = sx + Math.sin(upper) * 44;
-    const ey = sy + Math.cos(upper) * 44;
+    const ex = sx + Math.sin(upper) * 28;
+    const ey = sy + Math.cos(upper) * 28;
     const lower = rad((pose.arm + pose.forearm) * side);
-    const wx = ex + Math.sin(lower) * 40;
-    const wy = ey + Math.cos(lower) * 40;
+    const wx = ex + Math.sin(lower) * 26;
+    const wy = ey + Math.cos(lower) * 26;
     const h = rad(pose.hand);
-    const hx = wx + Math.sin(h) * 12 * side;
-    const hy = wy + Math.cos(h) * 12;
+    const hx = wx + Math.sin(h) * 10 * side;
+    const hy = wy + Math.cos(h) * 10;
     return `M ${f(sx)} ${f(sy)} L ${f(ex)} ${f(ey)} L ${f(wx)} ${f(wy)} L ${f(hx)} ${f(hy)}`;
   };
 

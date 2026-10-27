@@ -1,17 +1,16 @@
 import { render } from '@testing-library/react-native';
 
-import { EXERCISE_ANIMATIONS } from '../components/ExerciseAnimation';
+import StickFigure from '../components/StickFigure';
 import { EXERCISES } from '../src/exercises';
-import { ANIMATIONS, REST_POSE, geometryOf, poseAt } from '../src/motion';
+import { ANIMATIONS, HEAD_RADIUS, REST_POSE, VIEW_BOX, geometryOf, poseAt } from '../src/motion';
 
 describe('exercise animations', () => {
-  it.each(EXERCISES.map((e) => e.illustration))('has motion data and a component for %s', (key) => {
+  it.each(EXERCISES.map((e) => e.illustration))('has motion data for %s', (key) => {
     expect(ANIMATIONS[key]).toBeDefined();
-    expect(EXERCISE_ANIMATIONS[key]).toBeDefined();
   });
 
-  it.each(Object.entries(EXERCISE_ANIMATIONS))('renders %s', (_key, Component) => {
-    expect(() => render(<Component />)).not.toThrow();
+  it.each(Object.entries(ANIMATIONS))('renders %s', (_key, animation) => {
+    expect(() => render(<StickFigure animation={animation} />)).not.toThrow();
   });
 
   it.each(Object.entries(ANIMATIONS))('%s has well-formed, seamlessly looping keyframes', (_k, a) => {
@@ -61,6 +60,26 @@ describe('geometryOf', () => {
   it('never produces NaN', () => {
     for (const a of Object.values(ANIMATIONS)) {
       for (let p = 0; p <= 1; p += 0.05) expect(geometryOf(poseAt(a, p)).body).not.toContain('NaN');
+    }
+  });
+
+  it.each(Object.entries(ANIMATIONS))('keeps %s inside the view box', (_k, a) => {
+    const [minX, minY, width, height] = VIEW_BOX.split(' ').map(Number);
+    for (let p = 0; p <= 1.0001; p += 0.01) {
+      const { body, head } = geometryOf(poseAt(a, Math.min(p, 1)));
+      const nums = (body.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+      const points: [number, number][] = [];
+      for (let i = 0; i < nums.length; i += 2) points.push([nums[i], nums[i + 1]]);
+      points.push(
+        [head.cx - HEAD_RADIUS, head.cy - HEAD_RADIUS],
+        [head.cx + HEAD_RADIUS, head.cy + HEAD_RADIUS],
+      );
+      for (const [x, y] of points) {
+        expect(x).toBeGreaterThanOrEqual(minX);
+        expect(x).toBeLessThanOrEqual(minX + width);
+        expect(y).toBeGreaterThanOrEqual(minY);
+        expect(y).toBeLessThanOrEqual(minY + height);
+      }
     }
   });
 });

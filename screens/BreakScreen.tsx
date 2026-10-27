@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { EXERCISE_ANIMATIONS } from '../components/ExerciseAnimation';
+import StickFigure from '../components/StickFigure';
 import type { Exercise } from '../src/exercises';
+import { ANIMATIONS } from '../src/motion';
 import { exerciseSeconds, positionAt } from '../src/session';
 import { theme } from '../src/theme';
 import { formatTime } from '../src/time';
@@ -20,7 +21,7 @@ export default function BreakScreen({ routine, elapsedMs, onNext, onSkipBreak }:
   const position = positionAt(routine, elapsedMs);
   const exercise = routine[position.index];
   if (!exercise) return null;
-  const Demo = EXERCISE_ANIMATIONS[exercise.illustration];
+  const animation = ANIMATIONS[exercise.illustration];
 
   return (
     <View style={styles.container}>
@@ -40,7 +41,7 @@ export default function BreakScreen({ routine, elapsedMs, onNext, onSkipBreak }:
         importantForAccessibility="no-hide-descendants"
         style={styles.demo}
       >
-        {Demo ? <Demo key={exercise.id} /> : null}
+        {animation ? <StickFigure key={exercise.id} animation={animation} /> : null}
       </View>
       <Text style={styles.name}>{exercise.name}</Text>
       <View>
