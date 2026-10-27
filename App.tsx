@@ -38,6 +38,7 @@ export default function App() {
   const breakKey = `${state.phase}-${state.completedFocusSessions}`;
   const skippedMs = skipped.key === breakKey ? skipped.ms : 0;
   const routine = useMemo(() => buildRoutine(DURATIONS[state.phase], BODY_PARTS), [state.phase]);
+  const elapsedMs = DURATIONS[state.phase] * 1000 - state.remainingMs + skippedMs;
 
   const toggle = () =>
     setState((s) => (s.running ? pause(s, Date.now()) : start(s, Date.now())));
@@ -48,8 +49,8 @@ export default function App() {
     const fresh = tick(state, Date.now());
     setState(fresh);
     if (fresh.phase !== state.phase) return;
-    const elapsed = DURATIONS[fresh.phase] * 1000 - fresh.remainingMs + skippedMs;
-    setSkipped({ key: breakKey, ms: skippedMs + skipAheadMs(routine, elapsed) });
+    const freshElapsedMs = DURATIONS[fresh.phase] * 1000 - fresh.remainingMs + skippedMs;
+    setSkipped({ key: breakKey, ms: skippedMs + skipAheadMs(routine, freshElapsedMs) });
   };
 
   return (
@@ -61,7 +62,7 @@ export default function App() {
       {state.phase !== 'focus' && (
         <BreakScreen
           routine={routine}
-          elapsedMs={DURATIONS[state.phase] * 1000 - state.remainingMs + skippedMs}
+          elapsedMs={elapsedMs}
           onNext={nextExercise}
           onSkipBreak={() => setState((s) => skip(s))}
         />

@@ -35,7 +35,6 @@ export default function BreakScreen({ routine, elapsedMs, onNext, onSkipBreak }:
         ))}
       </View>
       <View
-        testID="illustration"
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         style={styles.demo}

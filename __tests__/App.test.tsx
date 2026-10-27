@@ -141,13 +141,6 @@ describe('App', () => {
       expect(exerciseTime()).toHaveTextContent('00:29');
     });
 
-    it('lists every exercise of a long break', async () => {
-      await render(<App />);
-      await fireEvent.press(screen.getByText('Start'));
-      for (let i = 0; i < 3 * 30 + 25; i++) await advance(60 * 1000);
-      expect(screen.getByText('1 of 15')).toBeTruthy();
-    });
-
     it('Reset during a break restarts the routine', async () => {
       await startBreak();
       await fireEvent.press(screen.getByText('Next exercise'));

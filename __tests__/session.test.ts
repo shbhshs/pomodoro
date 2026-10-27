@@ -1,4 +1,4 @@
-import { EXERCISES } from '../src/exercises';
+import { BODY_PARTS, buildRoutine, EXERCISES } from '../src/exercises';
 import { exerciseSeconds, positionAt, skipAheadMs } from '../src/session';
 
 const routine = EXERCISES.slice(0, 3);
@@ -29,5 +29,13 @@ describe('exercise session', () => {
     expect(p.index).toBe(1);
     expect(exerciseSeconds(p)).toBe(60);
     expect(skipAheadMs(routine, 150_000)).toBe(0);
+  });
+
+  it('covers a long break with one exercise per minute, ending on the 15th', () => {
+    const long = buildRoutine(15 * 60, BODY_PARTS);
+    expect(long).toHaveLength(15);
+    expect(positionAt(long, 0).index).toBe(0);
+    expect(positionAt(long, 14 * 60_000).index).toBe(14);
+    expect(positionAt(long, 15 * 60_000)).toEqual({ index: 14, remainingMs: 0 });
   });
 });
