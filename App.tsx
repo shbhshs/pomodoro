@@ -2,8 +2,20 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import BreakScreen from './screens/BreakScreen';
+import { BODY_PARTS, buildRoutine } from './src/exercises';
 import { formatTime } from './src/time';
-import { displaySeconds, initialState, pause, reset, start, tick, type Phase } from './src/timer';
+import {
+  DURATIONS,
+  displaySeconds,
+  initialState,
+  pause,
+  reset,
+  skip,
+  start,
+  tick,
+  type Phase,
+} from './src/timer';
 
 const LABELS: Record<Phase, string> = {
   focus: 'Focus',
@@ -30,7 +42,11 @@ export default function App() {
         {formatTime(displaySeconds(state))}
       </Text>
       {state.phase !== 'focus' && (
-        <Text style={styles.placeholder}>Exercise break: move around until the timer ends.</Text>
+        <BreakScreen
+          key={`${state.phase}-${state.completedFocusSessions}`}
+          routine={buildRoutine(DURATIONS[state.phase], BODY_PARTS)}
+          onSkipBreak={() => setState((s) => skip(s))}
+        />
       )}
       <View style={styles.buttons}>
         <Pressable accessibilityRole="button" style={styles.button} onPress={toggle}>
@@ -58,10 +74,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 20,
-    color: '#555',
-  },
-  placeholder: {
-    fontSize: 16,
     color: '#555',
   },
   buttons: {

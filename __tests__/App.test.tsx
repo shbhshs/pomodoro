@@ -42,7 +42,7 @@ describe('App', () => {
     await fireEvent.press(screen.getByText('Start'));
     await advance(25 * 60 * 1000);
     expect(screen.getByText('Short break')).toBeTruthy();
-    expect(screen.getByText(/Exercise break/)).toBeTruthy();
+    expect(screen.getByText('MOVEMENT BREAK')).toBeTruthy();
     expect(time()).toHaveTextContent('05:00');
 
     await advance(5 * 60 * 1000);
@@ -66,5 +66,46 @@ describe('App', () => {
     await fireEvent.press(screen.getByText('Reset'));
     expect(time()).toHaveTextContent('25:00');
     expect(screen.getByText('Start')).toBeTruthy();
+  });
+
+  describe('exercise break', () => {
+    const startBreak = async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+    };
+    const exerciseTime = () => screen.getByLabelText('exercise time remaining');
+
+    it('shows the first exercise, its steps and the safety line', async () => {
+      await startBreak();
+      expect(screen.getByText('Neck tilts and chin tucks')).toBeTruthy();
+      expect(screen.getByText(/1\. Tilt your ear/)).toBeTruthy();
+      expect(screen.getByText('1 of 5')).toBeTruthy();
+      expect(screen.getByText('Stop if anything hurts.')).toBeTruthy();
+      expect(exerciseTime()).toHaveTextContent('01:00');
+    });
+
+    it('advances to the next exercise when its countdown ends', async () => {
+      await startBreak();
+      await advance(30 * 1000);
+      expect(exerciseTime()).toHaveTextContent('00:30');
+      await advance(31 * 1000);
+      expect(screen.getByText('Shoulder rolls and shrugs')).toBeTruthy();
+      expect(screen.getByText('2 of 5')).toBeTruthy();
+    });
+
+    it('Next exercise moves on immediately', async () => {
+      await startBreak();
+      await fireEvent.press(screen.getByText('Next exercise'));
+      expect(screen.getByText('Shoulder rolls and shrugs')).toBeTruthy();
+      expect(exerciseTime()).toHaveTextContent('01:00');
+    });
+
+    it('Skip break returns to focus', async () => {
+      await startBreak();
+      await fireEvent.press(screen.getByText('Skip break'));
+      expect(screen.getByText('Focus')).toBeTruthy();
+      expect(screen.queryByText('MOVEMENT BREAK')).toBeNull();
+    });
   });
 });
