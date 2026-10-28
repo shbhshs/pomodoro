@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { DURATIONS, type TimerState } from './timer';
+import { DEFAULT_SETTINGS, type Settings } from './settings';
+import type { TimerState } from './timer';
 
 export interface DailyStats {
   /** Local calendar day these counts belong to, as YYYY-MM-DD. */
@@ -48,13 +49,18 @@ export function mergeStats(a: DailyStats, b: DailyStats): DailyStats {
 }
 
 /** Counts a completion on the day of `at`, starting a new day if needed. */
-export function record(stats: DailyStats, kind: Completion, at: number): DailyStats {
+export function record(
+  stats: DailyStats,
+  kind: Completion,
+  at: number,
+  settings: Settings = DEFAULT_SETTINGS,
+): DailyStats {
   const today = statsForDay(stats, at);
   if (kind === 'focus') {
     return {
       ...today,
       focusSessions: today.focusSessions + 1,
-      focusMinutes: today.focusMinutes + DURATIONS.focus / 60,
+      focusMinutes: today.focusMinutes + settings.focusMinutes,
     };
   }
   return { ...today, exerciseSessions: today.exerciseSessions + 1 };

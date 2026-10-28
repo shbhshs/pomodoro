@@ -1,5 +1,6 @@
 import type { Exercise } from './exercises';
-import { DURATIONS, tick, type TimerState } from './timer';
+import { DEFAULT_SETTINGS, type Settings } from './settings';
+import { durationsFor, tick, type TimerState } from './timer';
 
 export interface ExercisePosition {
   /** Index of the current exercise in the routine. */
@@ -40,16 +41,27 @@ function skipAheadMs(routine: Exercise[], elapsedMs: number): number {
 }
 
 /** Milliseconds of the routine that have passed, including "Next exercise" jumps. */
-export function routineElapsedMs(state: TimerState): number {
-  return DURATIONS[state.phase] * 1000 - state.remainingMs + state.skippedMs;
+export function routineElapsedMs(
+  state: TimerState,
+  settings: Settings = DEFAULT_SETTINGS,
+): number {
+  return durationsFor(settings)[state.phase] * 1000 - state.remainingMs + state.skippedMs;
 }
 
 /**
  * Starts the next exercise now. The offset lives in the timer state, so it
  * ends with the break. If the break ended by `now`, only the timer advances.
  */
-export function nextExercise(state: TimerState, routine: Exercise[], now: number): TimerState {
-  const fresh = tick(state, now);
+export function nextExercise(
+  state: TimerState,
+  routine: Exercise[],
+  now: number,
+  settings: Settings = DEFAULT_SETTINGS,
+): TimerState {
+  const fresh = tick(state, now, settings);
   if (fresh.phase !== state.phase) return fresh;
-  return { ...fresh, skippedMs: fresh.skippedMs + skipAheadMs(routine, routineElapsedMs(fresh)) };
+  return {
+    ...fresh,
+    skippedMs: fresh.skippedMs + skipAheadMs(routine, routineElapsedMs(fresh, settings)),
+  };
 }

@@ -1,13 +1,16 @@
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
+import SettingsScreen from './screens/SettingsScreen';
 import { playCue, shouldCue } from './src/cue';
-import { BODY_PARTS, buildRoutine } from './src/exercises';
+import { buildRoutine } from './src/exercises';
 import { schedulePhaseEnd } from './src/notifications';
 import { nextExercise, positionAt, routineElapsedMs } from './src/session';
+import { DEFAULT_SETTINGS, type Settings } from './src/settings';
+import { loadSettings, saveSettings } from './src/settingsStorage';
 import {
   completionBetween,
   emptyStats,
@@ -21,8 +24,8 @@ import {
 import { theme } from './src/theme';
 import { formatTime } from './src/time';
 import {
-  DURATIONS,
   displaySeconds,
+  durationsFor,
   initialState,
   pause,
   reset,
@@ -39,13 +42,44 @@ const LABELS: Record<Phase, string> = {
 };
 
 export default function App() {
-  const [state, setState] = useState(initialState);
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [state, setState] = useState(() => initialState(DEFAULT_SETTINGS));
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
+  // Nothing is shown until the saved settings are in, so the timer never runs
+  // with lengths that later change under it and the user cannot edit before
+  // the load finishes.
+  useEffect(() => {
+    let cancelled = false;
+    void loadSettings().then((saved) => {
+      if (cancelled) return;
+      setSettings(saved);
+      setState((s) => reset(s, saved));
+      setSettingsLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Changing a length restarts the current phase at its new length, stopped.
+  // Other changes (body parts, session count) leave the timer alone.
+  const changeSettings = (next: Settings) => {
+    setSettings(next);
+    void saveSettings(next);
+    if (durationsFor(next)[state.phase] !== durationsFor(settings)[state.phase]) {
+      setState((s) => reset(s, next));
+    }
+  };
 
   useEffect(() => {
     if (!state.running) return;
-    const id = setInterval(() => setState((s) => tick(s, Date.now())), 1000);
+    const id = setInterval(() => setState((s) => tick(s, Date.now(), settings)), 1000);
     return () => clearInterval(id);
-  }, [state.running]);
+  }, [state.running, settings]);
 
   // One notification per running phase; pausing, resetting, skipping or the
   // phase rolling over changes endsAt and replaces it.
@@ -82,7 +116,8 @@ export default function App() {
     const prev = previous.current;
     previous.current = state;
     const completed = completionBetween(prev, state);
-    if (completed) setStats((s) => record(s, completed, prev.endsAt ?? Date.now()));
+    if (completed) setStats((s) => record(s, completed, prev.endsAt ?? Date.now(), settingsRef.current));
+    // Only a new timer state is a completion; later settings changes are not.
   }, [state]);
 
   useEffect(() => {
@@ -107,14 +142,17 @@ export default function App() {
   const today = statsForDay(stats, Date.now());
 
   const routine = useMemo(
-    () => (state.phase === 'focus' ? [] : buildRoutine(DURATIONS[state.phase], BODY_PARTS)),
-    [state.phase],
+    () =>
+      state.phase === 'focus'
+        ? []
+        : buildRoutine(durationsFor(settings)[state.phase], settings.bodyParts),
+    [state.phase, settings],
   );
 
   // One cue per phase change, and one per move forward to the next exercise
   // (timed or by "Next exercise"). Reset going back to the first does not cue.
   const exerciseIndex =
-    state.phase === 'focus' ? 0 : positionAt(routine, routineElapsedMs(state)).index;
+    state.phase === 'focus' ? 0 : positionAt(routine, routineElapsedMs(state, settings)).index;
   const lastCued = useRef({ phase: state.phase, exerciseIndex });
   useEffect(() => {
     const last = lastCued.current;
@@ -123,7 +161,9 @@ export default function App() {
   }, [state.phase, exerciseIndex]);
 
   const toggle = () =>
-    setState((s) => (s.running ? pause(s, Date.now()) : start(s, Date.now())));
+    setState((s) => (s.running ? pause(s, Date.now(), settings) : start(s, Date.now())));
+
+  if (!settingsLoaded) return null;
 
   return (
     <View style={styles.container}>
@@ -134,9 +174,9 @@ export default function App() {
       {state.phase !== 'focus' && (
         <BreakScreen
           routine={routine}
-          elapsedMs={routineElapsedMs(state)}
-          onNext={() => setState((s) => nextExercise(s, routine, Date.now()))}
-          onSkipBreak={() => setState((s) => skip(s))}
+          elapsedMs={routineElapsedMs(state, settings)}
+          onNext={() => setState((s) => nextExercise(s, routine, Date.now(), settings))}
+          onSkipBreak={() => setState((s) => skip(s, settings))}
         />
       )}
       <View style={styles.stats} accessibilityLabel="today stats">
@@ -151,10 +191,28 @@ export default function App() {
         <Pressable
           accessibilityRole="button"
           style={styles.button}
-          onPress={() => setState((s) => reset(s))}>
+          onPress={() => setState((s) => reset(s, settings))}>
           <Text style={styles.buttonText}>Reset</Text>
         </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          style={styles.button}
+          onPress={() => setShowSettings(true)}>
+          <Text style={styles.buttonText}>⚙</Text>
+        </Pressable>
       </View>
+      <Modal
+        visible={showSettings}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowSettings(false)}>
+        <SettingsScreen
+          settings={settings}
+          onChange={changeSettings}
+          onDone={() => setShowSettings(false)}
+        />
+      </Modal>
       <StatusBar style="auto" />
     </View>
   );

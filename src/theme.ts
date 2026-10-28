@@ -3,6 +3,7 @@ export const theme = {
   focus: {
     background: '#1B1412',
     border: '#3A2E29',
+    borderStrong: '#5A4A42',
     text: '#F6EFE9',
     textMuted: '#A89A90',
   },
