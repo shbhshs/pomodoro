@@ -167,17 +167,14 @@ export default function App() {
 
   if (!settingsLoaded) return null;
 
+  const focus = state.phase === 'focus';
   const progress = phaseProgress(state, settings);
-  const next =
-    state.phase === 'focus'
-      ? `Next: a ${nextBreakMinutes(state, settings)} minute movement break`
-      : 'Next: a focus session';
 
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
         <Text style={styles.session}>
-          Session {sessionNumber(state, settings)} of {settings.sessionsBeforeLongBreak}
+          {focus ? `Session ${sessionNumber(state, settings)} of ${settings.sessionsBeforeLongBreak}` : ''}
         </Text>
         <Pressable
           accessibilityRole="button"
@@ -188,34 +185,50 @@ export default function App() {
         </Pressable>
       </View>
       <Text style={styles.label}>{LABELS[state.phase]}</Text>
-      <View style={styles.ring}>
-        <Svg width={RING_SIZE} height={RING_SIZE} importantForAccessibility="no-hide-descendants">
-          <Circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            stroke={theme.focus.surface}
-            strokeWidth={RING_STROKE}
-            fill="none"
-          />
-          <Circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            stroke={theme.focus.accent}
-            strokeWidth={RING_STROKE}
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray={[RING_CIRCUMFERENCE * progress, RING_CIRCUMFERENCE]}
-            rotation={-90}
-            origin={[RING_SIZE / 2, RING_SIZE / 2].join(', ')}
-          />
-        </Svg>
-        <Text style={styles.time} accessibilityLabel="time remaining">
+      {focus ? (
+        <View style={styles.ring} testID="progress-ring">
+          <Svg
+            width={RING_SIZE}
+            height={RING_SIZE}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants">
+            <Circle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RING_RADIUS}
+              stroke={theme.focus.surface}
+              strokeWidth={RING_STROKE}
+              fill="none"
+            />
+            {progress > 0 && (
+              <Circle
+                cx={RING_SIZE / 2}
+                cy={RING_SIZE / 2}
+                r={RING_RADIUS}
+                stroke={theme.focus.accent}
+                strokeWidth={RING_STROKE}
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray={[RING_CIRCUMFERENCE * progress, RING_CIRCUMFERENCE]}
+                rotation={-90}
+                origin={[RING_SIZE / 2, RING_SIZE / 2].join(', ')}
+              />
+            )}
+          </Svg>
+          <Text style={styles.time} accessibilityLabel="time remaining">
+            {formatTime(displaySeconds(state))}
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.breakTime} accessibilityLabel="time remaining">
           {formatTime(displaySeconds(state))}
         </Text>
-      </View>
-      <Text style={styles.next}>{next}</Text>
+      )}
+      {focus && (
+        <Text style={styles.next}>
+          Next: a {nextBreakMinutes(state, settings)} minute movement break
+        </Text>
+      )}
       {state.phase !== 'focus' && (
         <BreakScreen
           routine={routine}
@@ -275,13 +288,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.focus.background,
     alignItems: 'center',
-    paddingHorizontal: 28,
     paddingTop: 64,
     paddingBottom: 32,
     gap: 8,
   },
   topRow: {
     alignSelf: 'stretch',
+    marginHorizontal: 28,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -313,8 +326,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontVariant: ['tabular-nums'],
   },
+  breakTime: {
+    color: theme.focus.text,
+    fontSize: 48,
+    fontWeight: '500',
+    fontVariant: ['tabular-nums'],
+  },
   next: { color: theme.focus.textMuted, fontSize: 16, marginTop: 8 },
-  buttons: { alignSelf: 'stretch', flexDirection: 'row', gap: 16, marginTop: 16 },
+  buttons: { alignSelf: 'stretch', marginHorizontal: 28, flexDirection: 'row', gap: 16, marginTop: 16 },
   primaryButton: {
     flex: 1,
     height: 56,
@@ -337,6 +356,7 @@ const styles = StyleSheet.create({
   stats: {
     flexDirection: 'row',
     alignSelf: 'stretch',
+    marginHorizontal: 28,
     marginTop: 'auto',
     padding: 16,
     borderRadius: 20,

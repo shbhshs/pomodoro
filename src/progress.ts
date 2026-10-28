@@ -1,15 +1,14 @@
 import type { Settings } from './settings';
 import { durationsFor, type TimerState } from './timer';
 
-/** Share of the phase that has passed, from 0 (just started) to 1 (done). */
-export function progressFraction(remainingMs: number, totalMs: number): number {
-  if (totalMs <= 0) return 0;
-  return Math.min(1, Math.max(0, 1 - remainingMs / totalMs));
-}
-
-/** Share of the current phase that has passed, for the progress ring. */
+/**
+ * Share of the current phase that has passed, from 0 (just started) to 1 (done).
+ * Clamped because shortening a length in settings can leave more time remaining
+ * than the new total.
+ */
 export function phaseProgress(state: TimerState, settings: Settings): number {
-  return progressFraction(state.remainingMs, durationsFor(settings)[state.phase] * 1000);
+  const totalMs = durationsFor(settings)[state.phase] * 1000;
+  return Math.min(1, Math.max(0, 1 - state.remainingMs / totalMs));
 }
 
 /** Which focus session of the cycle the screen is in, from 1 to `sessionsBeforeLongBreak`. */

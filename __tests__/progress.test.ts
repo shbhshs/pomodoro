@@ -1,26 +1,21 @@
-import { nextBreakMinutes, phaseProgress, progressFraction, sessionNumber } from '../src/progress';
+import { nextBreakMinutes, phaseProgress, sessionNumber } from '../src/progress';
 import { DEFAULT_SETTINGS } from '../src/settings';
 import { initialState, type Phase } from '../src/timer';
 
-describe('progressFraction', () => {
-  it('is 0 at the start, 0.5 halfway and 1 at the end', () => {
-    expect(progressFraction(1500, 1500)).toBe(0);
-    expect(progressFraction(750, 1500)).toBe(0.5);
-    expect(progressFraction(0, 1500)).toBe(1);
-  });
-
-  it('clamps out-of-range values and a zero total', () => {
-    expect(progressFraction(2000, 1500)).toBe(0);
-    expect(progressFraction(-5, 1500)).toBe(1);
-    expect(progressFraction(10, 0)).toBe(0);
-  });
-});
-
 describe('phaseProgress', () => {
-  it('uses the phase length from settings', () => {
+  it('is 0 at the start, 0.5 halfway, 0.75 at three quarters and 1 at the end', () => {
     const s = initialState(DEFAULT_SETTINGS);
-    expect(phaseProgress(s, DEFAULT_SETTINGS)).toBe(0);
-    expect(phaseProgress({ ...s, remainingMs: s.remainingMs / 4 }, DEFAULT_SETTINGS)).toBe(0.75);
+    const at = (remainingMs: number) => phaseProgress({ ...s, remainingMs }, DEFAULT_SETTINGS);
+    expect(at(s.remainingMs)).toBe(0);
+    expect(at(s.remainingMs / 2)).toBe(0.5);
+    expect(at(s.remainingMs / 4)).toBe(0.75);
+    expect(at(0)).toBe(1);
+  });
+
+  it('clamps when the phase was shortened in settings mid-phase', () => {
+    const s = initialState(DEFAULT_SETTINGS);
+    expect(phaseProgress({ ...s, remainingMs: s.remainingMs * 2 }, DEFAULT_SETTINGS)).toBe(0);
+    expect(phaseProgress({ ...s, remainingMs: -5 }, DEFAULT_SETTINGS)).toBe(1);
   });
 });
 
