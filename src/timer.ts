@@ -1,3 +1,5 @@
+import { DEFAULT_SETTINGS, type Settings } from './settings';
+
 export type Phase = 'focus' | 'shortBreak' | 'longBreak';
 
 export interface TimerState {
@@ -14,18 +16,22 @@ export interface TimerState {
   skippedMs: number;
 }
 
-export const DURATIONS: Record<Phase, number> = {
-  focus: 25 * 60,
-  shortBreak: 5 * 60,
-  longBreak: 15 * 60,
-};
+/** Length of each phase in seconds, for the default settings. */
+export const DURATIONS: Record<Phase, number> = durationsFor(DEFAULT_SETTINGS);
 
-export const SESSIONS_BEFORE_LONG_BREAK = 4;
+/** Length of each phase in seconds under `settings`. */
+export function durationsFor(settings: Settings): Record<Phase, number> {
+  return {
+    focus: settings.focusMinutes * 60,
+    shortBreak: settings.shortBreakMinutes * 60,
+    longBreak: settings.longBreakMinutes * 60,
+  };
+}
 
-export function initialState(): TimerState {
+export function initialState(settings: Settings = DEFAULT_SETTINGS): TimerState {
   return {
     phase: 'focus',
-    remainingMs: DURATIONS.focus * 1000,
+    remainingMs: settings.focusMinutes * 60 * 1000,
     running: false,
     completedFocusSessions: 0,
     completedBreaks: 0,
@@ -38,10 +44,11 @@ function enterPhase(
   phase: Phase,
   completedFocusSessions: number,
   completedBreaks: number,
+  settings: Settings,
 ): TimerState {
   return {
     phase,
-    remainingMs: DURATIONS[phase] * 1000,
+    remainingMs: durationsFor(settings)[phase] * 1000,
     running: false,
     completedFocusSessions,
     completedBreaks,
@@ -70,16 +77,20 @@ export function start(state: TimerState, now: number): TimerState {
  * Freezes the remaining time at `now`. If the phase has already ended by
  * `now`, it behaves like `tick` and advances to the next phase.
  */
-export function pause(state: TimerState, now: number): TimerState {
+export function pause(
+  state: TimerState,
+  now: number,
+  settings: Settings = DEFAULT_SETTINGS,
+): TimerState {
   if (!state.running) return state;
-  const advanced = tick(state, now);
+  const advanced = tick(state, now, settings);
   if (advanced.running) return { ...advanced, running: false, endsAt: null };
   return advanced;
 }
 
 /** Restores the current phase to its full duration, stopped. */
-export function reset(state: TimerState): TimerState {
-  return enterPhase(state.phase, state.completedFocusSessions, state.completedBreaks);
+export function reset(state: TimerState, settings: Settings = DEFAULT_SETTINGS): TimerState {
+  return enterPhase(state.phase, state.completedFocusSessions, state.completedBreaks, settings);
 }
 
 /**
@@ -87,7 +98,11 @@ export function reset(state: TimerState): TimerState {
  * app was backgrounded. When the phase ends it advances to the next phase and
  * keeps running.
  */
-export function tick(state: TimerState, now: number): TimerState {
+export function tick(
+  state: TimerState,
+  now: number,
+  settings: Settings = DEFAULT_SETTINGS,
+): TimerState {
   if (!state.running) return state;
   const remaining = remainingAt(state, now);
   if (remaining > 0) return { ...state, remainingMs: remaining };
@@ -95,12 +110,18 @@ export function tick(state: TimerState, now: number): TimerState {
   if (state.phase === 'focus') {
     const completed = state.completedFocusSessions + 1;
     next = enterPhase(
-      completed % SESSIONS_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak',
+      completed % settings.sessionsBeforeLongBreak === 0 ? 'longBreak' : 'shortBreak',
       completed,
       state.completedBreaks,
+      settings,
     );
   } else {
-    next = enterPhase('focus', state.completedFocusSessions, state.completedBreaks + 1);
+    next = enterPhase(
+      'focus',
+      state.completedFocusSessions,
+      state.completedBreaks + 1,
+      settings,
+    );
   }
   // The next phase starts exactly when this one ended, so no time is lost to
   // tick granularity. After a long gap it starts now instead of cascading.
@@ -113,10 +134,11 @@ export function tick(state: TimerState, now: number): TimerState {
  * Moves to the next phase without completing the current one: skipping a
  * focus session does not count it and leads to a short break.
  */
-export function skip(state: TimerState): TimerState {
+export function skip(state: TimerState, settings: Settings = DEFAULT_SETTINGS): TimerState {
   return enterPhase(
     state.phase === 'focus' ? 'shortBreak' : 'focus',
     state.completedFocusSessions,
     state.completedBreaks,
+    settings,
   );
 }
