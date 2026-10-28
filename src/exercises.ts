@@ -1,5 +1,12 @@
 export type BodyPart = 'neck' | 'shoulders' | 'back' | 'arms' | 'legs';
 
+export type IllustrationKey =
+  | 'neck-tilts'
+  | 'shoulder-rolls'
+  | 'spinal-twist'
+  | 'wrist-circles'
+  | 'chair-squats';
+
 export interface Exercise {
   id: string;
   bodyPart: BodyPart;
@@ -7,7 +14,8 @@ export interface Exercise {
   /** 2 to 4 short instructions. */
   steps: string[];
   durationSeconds: number;
-  illustration: string;
+  /** Keys the motion data in `src/motion.ts`. */
+  illustration: IllustrationKey;
 }
 
 export const BODY_PARTS: BodyPart[] = ['neck', 'shoulders', 'back', 'arms', 'legs'];
