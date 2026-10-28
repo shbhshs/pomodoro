@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
+import { playCue } from './src/cue';
 import { BODY_PARTS, buildRoutine } from './src/exercises';
 import { schedulePhaseEnd } from './src/notifications';
-import { nextExercise, routineElapsedMs } from './src/session';
+import { nextExercise, positionAt, routineElapsedMs } from './src/session';
 import {
   completionBetween,
   emptyStats,
@@ -109,6 +110,17 @@ export default function App() {
     () => (state.phase === 'focus' ? [] : buildRoutine(DURATIONS[state.phase], BODY_PARTS)),
     [state.phase],
   );
+
+  // One cue per phase change, and one per move forward to the next exercise
+  // (timed or by "Next exercise"). Reset going back to the first does not cue.
+  const exerciseIndex =
+    state.phase === 'focus' ? 0 : positionAt(routine, routineElapsedMs(state)).index;
+  const lastCued = useRef({ phase: state.phase, exerciseIndex });
+  useEffect(() => {
+    const last = lastCued.current;
+    lastCued.current = { phase: state.phase, exerciseIndex };
+    if (state.phase !== last.phase || exerciseIndex > last.exerciseIndex) playCue();
+  }, [state.phase, exerciseIndex]);
 
   const toggle = () =>
     setState((s) => (s.running ? pause(s, Date.now()) : start(s, Date.now())));
