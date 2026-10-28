@@ -53,6 +53,13 @@ describe('App', () => {
     expect(time()).toHaveTextContent('25:00');
   });
 
+  it('shows the session number, next break and the ring before starting', async () => {
+    await render(<App />);
+    expect(screen.getByText('Session 1 of 4')).toBeTruthy();
+    expect(screen.getByText('Next: a 5 minute movement break')).toBeTruthy();
+    expect(screen.getByTestId('progress-ring')).toBeTruthy();
+  });
+
   it('counts down while running and holds when paused', async () => {
     await render(<App />);
     await fireEvent.press(screen.getByText('Start'));
@@ -297,6 +304,14 @@ describe('App', () => {
       expect(screen.getByText('1 of 5')).toBeTruthy();
       expect(screen.getByText('Stop if anything hurts.')).toBeTruthy();
       expect(exerciseTime()).toHaveTextContent('01:00');
+    });
+
+    it('shows the break UI without the focus ring, session row or next line', async () => {
+      await startBreak();
+      expect(screen.getByText('Skip break')).toBeTruthy();
+      expect(screen.queryByTestId('progress-ring')).toBeNull();
+      expect(screen.queryByText(/Session \d of/)).toBeNull();
+      expect(screen.queryByText(/^Next:/)).toBeNull();
     });
 
     it('advances to the next exercise when its countdown ends', async () => {
