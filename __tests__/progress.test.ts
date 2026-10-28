@@ -33,11 +33,6 @@ describe('sessionNumber and nextBreakMinutes', () => {
     expect(sessionNumber(at(n, 'focus'), DEFAULT_SETTINGS)).toBe(1);
   });
 
-  it('keeps a break in the session it follows', () => {
-    expect(sessionNumber(at(1, 'shortBreak'), DEFAULT_SETTINGS)).toBe(1);
-    expect(sessionNumber(at(n, 'longBreak'), DEFAULT_SETTINGS)).toBe(n);
-  });
-
   it('announces a long break before the last session of the cycle', () => {
     const { shortBreakMinutes, longBreakMinutes } = DEFAULT_SETTINGS;
     expect(nextBreakMinutes(at(0, 'focus'), DEFAULT_SETTINGS)).toBe(shortBreakMinutes);

@@ -173,9 +173,11 @@ export default function App() {
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
-        <Text style={styles.session}>
-          {focus ? `Session ${sessionNumber(state, settings)} of ${settings.sessionsBeforeLongBreak}` : ''}
-        </Text>
+        {focus && (
+          <Text style={styles.session}>
+            Session {sessionNumber(state, settings)} of {settings.sessionsBeforeLongBreak}
+          </Text>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Settings"
@@ -193,8 +195,8 @@ export default function App() {
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants">
             <Circle
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
+              cx={RING_CENTER}
+              cy={RING_CENTER}
               r={RING_RADIUS}
               stroke={theme.focus.surface}
               strokeWidth={RING_STROKE}
@@ -202,8 +204,8 @@ export default function App() {
             />
             {progress > 0 && (
               <Circle
-                cx={RING_SIZE / 2}
-                cy={RING_SIZE / 2}
+                cx={RING_CENTER}
+                cy={RING_CENTER}
                 r={RING_RADIUS}
                 stroke={theme.focus.accent}
                 strokeWidth={RING_STROKE}
@@ -211,7 +213,7 @@ export default function App() {
                 fill="none"
                 strokeDasharray={[RING_CIRCUMFERENCE * progress, RING_CIRCUMFERENCE]}
                 rotation={-90}
-                origin={[RING_SIZE / 2, RING_SIZE / 2].join(', ')}
+                origin={`${RING_CENTER}, ${RING_CENTER}`}
               />
             )}
           </Svg>
@@ -279,6 +281,7 @@ function Stat({ value, label }: { value: number; label: string }) {
 }
 
 const RING_SIZE = 300;
+const RING_CENTER = RING_SIZE / 2;
 const RING_STROKE = 12;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -301,6 +304,7 @@ const styles = StyleSheet.create({
   },
   session: { color: theme.focus.textMuted, fontSize: 16 },
   iconButton: {
+    marginLeft: 'auto',
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -328,8 +332,8 @@ const styles = StyleSheet.create({
   },
   breakTime: {
     color: theme.focus.text,
-    fontSize: 48,
-    fontWeight: '500',
+    fontSize: 72,
+    fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
   next: { color: theme.focus.textMuted, fontSize: 16, marginTop: 8 },

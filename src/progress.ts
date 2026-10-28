@@ -14,10 +14,7 @@ export function phaseProgress(state: TimerState, settings: Settings): number {
 /** Which focus session of the cycle the screen is in, from 1 to `sessionsBeforeLongBreak`. */
 export function sessionNumber(state: TimerState, settings: Settings): number {
   const per = settings.sessionsBeforeLongBreak;
-  const done = state.completedFocusSessions % per;
-  if (state.phase === 'focus') return done + 1;
-  // A break belongs to the session just finished; the last one ends the cycle.
-  return done === 0 ? per : done;
+  return (state.completedFocusSessions % per) + 1;
 }
 
 /** Minutes of the movement break that follows the current focus session. */
