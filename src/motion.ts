@@ -28,9 +28,7 @@ export interface Pose {
   squat: number;
 }
 
-export type PoseKey = keyof Pose;
-
-export const POSE_KEYS: PoseKey[] = [
+export const POSE_KEYS: (keyof Pose)[] = [
   'headTilt',
   'headLift',
   'headTurn',
@@ -151,7 +149,7 @@ export function poseAt(animation: Animation, progress: number): Pose {
 export const VIEW_BOX = '0 0 200 300';
 export const HEAD_RADIUS = 20;
 
-export interface Geometry {
+interface Geometry {
   /** SVG path data for the neck, torso, arms and legs. */
   body: string;
   head: { cx: number; cy: number };

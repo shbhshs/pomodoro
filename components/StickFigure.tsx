@@ -48,6 +48,7 @@ export default function StickFigure({ animation }: Props) {
   return (
     <Svg width={200} height={300} viewBox={VIEW_BOX}>
       <AnimatedPath
+        testID="figure-body"
         d={initial.body}
         animatedProps={bodyProps}
         stroke={colors.accent}
@@ -57,6 +58,7 @@ export default function StickFigure({ animation }: Props) {
         fill="none"
       />
       <AnimatedCircle
+        testID="figure-head"
         cx={initial.head.cx}
         cy={initial.head.cy}
         r={HEAD_RADIUS}

@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
 
 import StickFigure from '../components/StickFigure';
 import { EXERCISES } from '../src/exercises';
@@ -9,8 +9,12 @@ describe('exercise animations', () => {
     expect(ANIMATIONS[key]).toBeDefined();
   });
 
-  it.each(Object.entries(ANIMATIONS))('renders %s', (_key, animation) => {
-    expect(() => render(<StickFigure animation={animation} />)).not.toThrow();
+  it.each(Object.entries(ANIMATIONS))('renders %s from its first pose', async (_key, animation) => {
+    await render(<StickFigure animation={animation} />);
+    const first = geometryOf(poseAt(animation, 0));
+    expect(screen.getByTestId('figure-body').props.d).toBe(first.body);
+    expect(screen.getByTestId('figure-head').props.cx).toBe(first.head.cx);
+    expect(screen.getByTestId('figure-head').props.cy).toBe(first.head.cy);
   });
 
   it.each(Object.entries(ANIMATIONS))('%s has well-formed, seamlessly looping keyframes', (_k, a) => {

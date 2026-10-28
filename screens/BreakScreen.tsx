@@ -37,11 +37,12 @@ export default function BreakScreen({ routine, elapsedMs, onNext, onSkipBreak }:
         ))}
       </View>
       <View
+        testID="demo-card"
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         style={styles.demo}
       >
-        {animation ? <StickFigure key={exercise.id} animation={animation} /> : null}
+        <StickFigure key={exercise.id} animation={animation} />
       </View>
       <Text style={styles.name}>{exercise.name}</Text>
       <View>
