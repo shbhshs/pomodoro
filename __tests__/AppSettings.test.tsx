@@ -52,15 +52,41 @@ describe('App settings', () => {
       'pomodoro.settings',
       JSON.stringify({
         focusMinutes: 10,
-        shortBreakMinutes: 5,
-        longBreakMinutes: 15,
-        sessionsBeforeLongBreak: 4,
+        shortBreakMinutes: 7,
+        longBreakMinutes: 20,
+        sessionsBeforeLongBreak: 3,
         bodyParts: ['neck'],
       }),
     );
     await render(<App />);
     await act(async () => {});
     expect(time()).toHaveTextContent('10:00');
+    await fireEvent.press(screen.getByLabelText('Settings'));
+    expect(screen.getByLabelText('Focus value')).toHaveTextContent('10 min');
+    expect(screen.getByLabelText('Short break value')).toHaveTextContent('7 min');
+    expect(screen.getByLabelText('Long break value')).toHaveTextContent('20 min');
+  });
+
+  it('restarts a running timer, stopped, when the focus length changes', async () => {
+    await render(<App />);
+    await fireEvent.press(screen.getByText('Start'));
+    expect(screen.getByText('Pause')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Settings'));
+    await fireEvent.press(screen.getByLabelText('Decrease focus'));
+    await fireEvent.press(screen.getByText('Done'));
+    expect(time()).toHaveTextContent('24:00');
+    expect(screen.getByText('Start')).toBeTruthy();
+  });
+
+  it('keeps a running timer when another length or a body part changes', async () => {
+    await render(<App />);
+    await fireEvent.press(screen.getByText('Start'));
+    await fireEvent.press(screen.getByLabelText('Settings'));
+    await fireEvent.press(screen.getByLabelText('Increase short break'));
+    await fireEvent.press(screen.getByText('Legs'));
+    await fireEvent.press(screen.getByText('Done'));
+    expect(screen.getByText('Pause')).toBeTruthy();
+    expect((await saved()).shortBreakMinutes).toBe(6);
   });
 
   it('keeps at least one body part selected', async () => {

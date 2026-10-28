@@ -16,9 +16,6 @@ export interface TimerState {
   skippedMs: number;
 }
 
-/** Length of each phase in seconds, for the default settings. */
-export const DURATIONS: Record<Phase, number> = durationsFor(DEFAULT_SETTINGS);
-
 /** Length of each phase in seconds under `settings`. */
 export function durationsFor(settings: Settings): Record<Phase, number> {
   return {
@@ -31,7 +28,7 @@ export function durationsFor(settings: Settings): Record<Phase, number> {
 export function initialState(settings: Settings = DEFAULT_SETTINGS): TimerState {
   return {
     phase: 'focus',
-    remainingMs: settings.focusMinutes * 60 * 1000,
+    remainingMs: durationsFor(settings).focus * 1000,
     running: false,
     completedFocusSessions: 0,
     completedBreaks: 0,

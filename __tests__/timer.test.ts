@@ -1,4 +1,7 @@
-import { DURATIONS, TimerState, displaySeconds, initialState, pause, reset, skip, start, tick } from '../src/timer';
+import { DEFAULT_SETTINGS } from '../src/settings';
+import { TimerState, displaySeconds, durationsFor, initialState, pause, reset, skip, start, tick } from '../src/timer';
+
+const DURATIONS = durationsFor(DEFAULT_SETTINGS);
 
 const T0 = 1_000_000;
 const running = (s: Partial<TimerState> = {}) => start({ ...initialState(), ...s }, T0);

@@ -5,7 +5,10 @@ import {
   positionAt,
   routineElapsedMs,
 } from '../src/session';
-import { DURATIONS, initialState, skip, start } from '../src/timer';
+import { DEFAULT_SETTINGS } from '../src/settings';
+import { durationsFor, initialState, skip, start } from '../src/timer';
+
+const DURATIONS = durationsFor(DEFAULT_SETTINGS);
 
 const routine = EXERCISES.slice(0, 3);
 

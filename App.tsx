@@ -44,16 +44,21 @@ const LABELS: Record<Phase, string> = {
 export default function App() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [state, setState] = useState(() => initialState(DEFAULT_SETTINGS));
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
-  // A phase that has not started yet picks up the saved lengths; one already
-  // running keeps going with the lengths it started with.
+  // Nothing is shown until the saved settings are in, so the timer never runs
+  // with lengths that later change under it and the user cannot edit before
+  // the load finishes.
   useEffect(() => {
     let cancelled = false;
     void loadSettings().then((saved) => {
       if (cancelled) return;
       setSettings(saved);
-      setState((s) => (s.running ? s : reset(s, saved)));
+      setState((s) => reset(s, saved));
+      setSettingsLoaded(true);
     });
     return () => {
       cancelled = true;
@@ -111,9 +116,8 @@ export default function App() {
     const prev = previous.current;
     previous.current = state;
     const completed = completionBetween(prev, state);
-    if (completed) setStats((s) => record(s, completed, prev.endsAt ?? Date.now(), settings));
+    if (completed) setStats((s) => record(s, completed, prev.endsAt ?? Date.now(), settingsRef.current));
     // Only a new timer state is a completion; later settings changes are not.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
   useEffect(() => {
@@ -158,6 +162,8 @@ export default function App() {
 
   const toggle = () =>
     setState((s) => (s.running ? pause(s, Date.now(), settings) : start(s, Date.now())));
+
+  if (!settingsLoaded) return null;
 
   return (
     <View style={styles.container}>
