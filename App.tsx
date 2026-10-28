@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BreakScreen from './screens/BreakScreen';
-import { playCue } from './src/cue';
+import { playCue, shouldCue } from './src/cue';
 import { BODY_PARTS, buildRoutine } from './src/exercises';
 import { schedulePhaseEnd } from './src/notifications';
 import { nextExercise, positionAt, routineElapsedMs } from './src/session';
@@ -119,7 +119,7 @@ export default function App() {
   useEffect(() => {
     const last = lastCued.current;
     lastCued.current = { phase: state.phase, exerciseIndex };
-    if (state.phase !== last.phase || exerciseIndex > last.exerciseIndex) playCue();
+    if (shouldCue(last, { phase: state.phase, exerciseIndex })) playCue();
   }, [state.phase, exerciseIndex]);
 
   const toggle = () =>
