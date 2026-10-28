@@ -29,7 +29,7 @@ npx expo install --fix      # fix incompatible package versions
 
 ## Design
 
-The look and layout of every screen are in `docs/design.md`. Follow it for any UI change: colours and sizes come from `src/theme.ts`, never from hex values in a screen.
+The look and layout of every screen are in `docs/design.md`. Follow it for any UI change: colours and sizes come from `src/theme.ts`, never from hex values in a screen. The reference images are in `docs/design/`; open the one for the screen you change and match it.
 
 ## Review focus
 

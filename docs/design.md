@@ -52,6 +52,8 @@ Font: DM Sans (`@expo-google-fonts/dm-sans`, weights 400, 500, 700). Numbers use
 
 ## Screens
 
+Reference images are in `docs/design/`: `focus.png`, `movement-break.png` and `settings.png`. Open the image for the screen you are building and match its layout, sizes and colours. The text below describes the same screens. The images were rendered from the approved mockups; the stick figure in the break image is a placeholder for the real animation.
+
 1. **Focus.** Top row: "Session N of 4" (muted) and a settings icon button. Phase label ("FOCUS") in `focus.accentText`. A 300 pt progress ring with the remaining time inside, `mm:ss`. Below it, "Next: a 5 minute movement break". Buttons: a wide Pause/Start button in the accent and an outlined Reset. At the bottom a stats card with three figures: focus sessions, focus minutes, exercise sessions (one completed movement break).
 2. **Movement break.** Uses the cool palette. Top row: "MOVEMENT BREAK" label and "N of 5". Under it a row of five progress segments. A demo card (300 high) holds the animated stick figure. Then the exercise name, the step text as a caption, and the exercise countdown with a note such as "left, 1 of 2 sides". Buttons: wide "Next exercise" in the accent and an outlined "Skip break". Footer line: "Stop if anything hurts."
 3. **Settings** (a modal). Title and a Done button. A "Durations" list with rows for focus, short break, long break and sessions before a long break, each with a minus button, the value and a plus button. A "Movement breaks include" group of chips for neck, shoulders, back, arms and wrists, and legs; selected chips use the cool accent, and at least one stays selected.
