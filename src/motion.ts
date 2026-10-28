@@ -148,7 +148,9 @@ export function poseAt(animation: Animation, progress: number): Pose {
   return out;
 }
 
-export const VIEW_BOX = '0 0 200 300';
+export const VIEW_WIDTH = 200;
+export const VIEW_HEIGHT = 300;
+export const VIEW_BOX = `0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`;
 export const HEAD_RADIUS = 20;
 
 interface Geometry {

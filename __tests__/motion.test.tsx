@@ -3,7 +3,16 @@ import { withRepeat, withTiming } from 'react-native-reanimated';
 
 import StickFigure from '../components/StickFigure';
 import { EXERCISES } from '../src/exercises';
-import { ANIMATIONS, HEAD_RADIUS, REST_POSE, VIEW_BOX, geometryOf, poseAt } from '../src/motion';
+import {
+  ANIMATIONS,
+  HEAD_RADIUS,
+  REST_POSE,
+  VIEW_BOX,
+  VIEW_HEIGHT,
+  VIEW_WIDTH,
+  geometryOf,
+  poseAt,
+} from '../src/motion';
 
 describe('exercise animations', () => {
   it.each(EXERCISES.map((e) => e.illustration))('has motion data for %s', (key) => {
@@ -16,6 +25,16 @@ describe('exercise animations', () => {
     expect(screen.getByTestId('figure-body').props.d).toBe(first.body);
     expect(screen.getByTestId('figure-head').props.cx).toBe(first.head.cx);
     expect(screen.getByTestId('figure-head').props.cy).toBe(first.head.cy);
+  });
+
+  it('sizes the svg from the view box', async () => {
+    await render(<StickFigure animation={ANIMATIONS[EXERCISES[0].illustration]} />);
+    const [, , width, height] = VIEW_BOX.split(' ').map(Number);
+    expect(VIEW_WIDTH).toBe(width);
+    expect(VIEW_HEIGHT).toBe(height);
+    const svg = screen.getByTestId('figure-svg');
+    expect(svg.props.width).toBe(width);
+    expect(svg.props.height).toBe(height);
   });
 
   it.each(Object.entries(ANIMATIONS))('%s loops linearly forever over its duration', async (_k, animation) => {
