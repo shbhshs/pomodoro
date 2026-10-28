@@ -5,6 +5,8 @@
  * them on the UI thread; they also run as ordinary functions in tests.
  */
 
+import type { IllustrationKey } from './exercises';
+
 /** Joint parameters of the figure. Angles are degrees, lengths are in viewBox units. */
 export interface Pose {
   /** Head rotation about the base of the neck; positive tilts to the figure's right. */
@@ -28,7 +30,7 @@ export interface Pose {
   squat: number;
 }
 
-export const POSE_KEYS: (keyof Pose)[] = [
+const POSE_KEYS: (keyof Pose)[] = [
   'headTilt',
   'headLift',
   'headTurn',
@@ -70,7 +72,7 @@ export interface Animation {
 const frame = (at: number, pose: Partial<Pose>): Keyframe => ({ at, pose });
 
 /** One animation per illustration key in `src/exercises.ts`. */
-export const ANIMATIONS: Record<string, Animation> = {
+export const ANIMATIONS: Record<IllustrationKey, Animation> = {
   'neck-tilts': {
     durationMs: 6000,
     keyframes: [

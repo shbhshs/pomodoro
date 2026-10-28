@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react-native';
+import { withRepeat, withTiming } from 'react-native-reanimated';
 
 import StickFigure from '../components/StickFigure';
 import { EXERCISES } from '../src/exercises';
@@ -15,6 +16,17 @@ describe('exercise animations', () => {
     expect(screen.getByTestId('figure-body').props.d).toBe(first.body);
     expect(screen.getByTestId('figure-head').props.cx).toBe(first.head.cx);
     expect(screen.getByTestId('figure-head').props.cy).toBe(first.head.cy);
+  });
+
+  it.each(Object.entries(ANIMATIONS))('%s loops linearly forever over its duration', async (_k, animation) => {
+    jest.mocked(withTiming).mockClear();
+    jest.mocked(withRepeat).mockClear();
+    await render(<StickFigure animation={animation} />);
+    expect(withTiming).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ duration: animation.durationMs }),
+    );
+    expect(withRepeat).toHaveBeenCalledWith(expect.anything(), -1, false);
   });
 
   it.each(Object.entries(ANIMATIONS))('%s has well-formed, seamlessly looping keyframes', (_k, a) => {
