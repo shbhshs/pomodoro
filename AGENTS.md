@@ -52,6 +52,8 @@ Expo ships breaking changes every SDK release. APIs you remember are likely rena
 2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
 3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
 
+If fetching the docs is denied or fails, do not stop and do not answer from memory: read the installed package instead (its type definitions and README under `node_modules/<package>/`, after `npx expo install`), and say in the PR description that the docs could not be fetched and the API was taken from the installed package.
+
 ## Navigation
 
 When the app needs more than one screen, use **Expo Router**: routes live in `src/app/`, every file there is a screen, and `_layout.tsx` files define navigators. Keep non-route code outside `src/app/`. Docs: https://docs.expo.dev/router/introduction.md
