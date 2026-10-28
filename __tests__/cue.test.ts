@@ -46,9 +46,13 @@ describe('playCue', () => {
   });
 
   it('does not throw when the haptic rejects', async () => {
+    const unhandled = jest.fn();
+    process.on('unhandledRejection', unhandled);
     notificationAsync.mockRejectedValue(new Error('fail'));
     expect(() => playCue()).not.toThrow();
-    await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(() => resolve()));
+    process.off('unhandledRejection', unhandled);
+    expect(unhandled).not.toHaveBeenCalled();
   });
 
   it('does not throw when creating the player throws, and still buzzes', () => {

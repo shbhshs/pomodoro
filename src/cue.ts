@@ -13,15 +13,13 @@ export function shouldCue(prev: CuePosition, next: CuePosition): boolean {
 /** Haptic tap plus the short cue sound. Never throws: a cue must not break the timer. */
 export function playCue(): void {
   try {
-    Promise.resolve(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)).catch(
-      () => undefined,
-    );
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   } catch {
     // Haptics unavailable; the sound still plays.
   }
   try {
     player ??= createAudioPlayer(require('../assets/cue.wav'));
-    Promise.resolve(player.seekTo(0)).catch(() => undefined);
+    player.seekTo(0).catch(() => {});
     player.play();
   } catch {
     // Audio unavailable; the haptic still fires.
