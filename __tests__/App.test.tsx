@@ -2,6 +2,7 @@ import { act } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 
 import App from '../App';
@@ -15,10 +16,19 @@ jest.mock('expo-notifications', () => ({
   SchedulableTriggerInputTypes: { DATE: 'date' },
 }));
 
+jest.mock('expo-haptics', () => ({
+  notificationAsync: jest.fn(async () => undefined),
+  NotificationFeedbackType: { Success: 'success' },
+}));
+
+const mockPlayer = { play: jest.fn(), seekTo: jest.fn(async () => undefined) };
+jest.mock('expo-audio', () => ({ createAudioPlayer: jest.fn(() => mockPlayer) }));
+
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+const haptic = jest.mocked(Haptics.notificationAsync);
 const scheduled = jest.mocked(Notifications.scheduleNotificationAsync);
 const cancelled = jest.mocked(Notifications.cancelScheduledNotificationAsync);
 
@@ -78,6 +88,40 @@ describe('App', () => {
     for (let i = 0; i < 3 * 30 + 25; i++) await advance(60 * 1000);
     expect(screen.getByText('Long break')).toBeTruthy();
     expect(time()).toHaveTextContent('15:00');
+  });
+
+  describe('cues', () => {
+    it('cues once per phase change and once per exercise change', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000 - 1000);
+      expect(haptic).not.toHaveBeenCalled();
+
+      await advance(1000); // focus -> short break
+      expect(haptic).toHaveBeenCalledTimes(1);
+      expect(mockPlayer.play).toHaveBeenCalledTimes(1);
+
+      await advance(60 * 1000); // exercise 1 -> 2
+      expect(haptic).toHaveBeenCalledTimes(2);
+      expect(mockPlayer.play).toHaveBeenCalledTimes(2);
+
+      await fireEvent.press(screen.getByText('Next exercise')); // 2 -> 3
+      expect(haptic).toHaveBeenCalledTimes(3);
+      expect(mockPlayer.play).toHaveBeenCalledTimes(3);
+
+      await advance(60 * 1000); // 3 -> 4
+      expect(haptic).toHaveBeenCalledTimes(4);
+    });
+
+    it('does not cue on Reset', async () => {
+      await render(<App />);
+      await fireEvent.press(screen.getByText('Start'));
+      await advance(25 * 60 * 1000);
+      await advance(60 * 1000);
+      haptic.mockClear();
+      await fireEvent.press(screen.getByText('Reset'));
+      expect(haptic).not.toHaveBeenCalled();
+    });
   });
 
   describe('today stats', () => {
